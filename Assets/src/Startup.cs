@@ -1,13 +1,11 @@
 using UnityEngine;
 using Leopotam.EcsLite;
 using static Globals;
-using static Ships;
 using static Sync;
 using static GameInput;
-using static Players;
 using static Entities;
-using static Projectiles;
 using static Ai;
+
 
 #if UNITY_EDITOR
 using Leopotam.EcsLite.UnityEditor;
@@ -65,7 +63,7 @@ public class Startup : MonoBehaviour
         
         SyncReferences();
         
-        
+           
         #if UNITY_EDITOR
         _debugSystems.Run();
         #endif

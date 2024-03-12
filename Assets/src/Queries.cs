@@ -12,6 +12,7 @@ public static class Queries
     public static EcsFilter TempQuery;
     public static EcsFilter FollowQuery;
     public static EcsFilter MoveQuery;
+    public static EcsFilter AiAgentsQuery;
     
     public static void InitQueries()
     {
@@ -24,5 +25,6 @@ public static class Queries
         TempQuery                = MainWorld.Filter<Temporary>().Exc<Destroy>().End();
         FollowQuery              = MainWorld.Filter<FollowTarget>().Inc<Transform>().Inc<Movable>().Exc<Destroy>().End();
         MoveQuery                = MainWorld.Filter<Movable>().Inc<Transform>().Exc<Destroy>().End();
+        AiAgentsQuery            = MainWorld.Filter<Movable>().Inc<Transform>().Inc<AiAgent>().Exc<Destroy>().End();
     }
 }

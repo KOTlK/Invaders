@@ -1,12 +1,14 @@
 using static Pools;
 using static Queries;
+using static Entities;
+using UnityEngine;
 
 public static class Ai
 {
     public static void UpdateAi()
     {
         UpdateFollowers();
-        UpdateSteering();
+        // UpdateSteering();
     }
     
     public static void UpdateFollowers()
@@ -39,8 +41,34 @@ public static class Ai
         }
     }
     
-    public static void UpdateSteering()
+    private static Collider2D[] obstacleColliders = new Collider2D[64];
+    public static void UpdateObstacleAvoidance()
     {
-        //TODO: implement steering;
+        foreach(var entity in AiAgentsQuery)
+        {
+            ref var transform = ref TransformPool.Get(entity);
+            ref var movable   = ref MovablePool.Get(entity);
+            ref var agent     = ref AiAgentPool.Get(entity);
+            
+            var direction = movable.direction;
+            
+            var obstaclesCount = Physics2D.OverlapCircleNonAlloc(transform.position, agent.radius, obstacleColliders);
+            
+            for(var i = 0; i < obstaclesCount; ++i)
+            {
+                var coll = obstacleColliders[i];
+                
+                if(coll.TryGetComponent(out Entity obstacleEntity))
+                {
+                    if(obstacleEntity.Id == entity)
+                        continue;
+                        
+                    ref var obstacleMovable   = ref MovablePool.Get(entity);
+                    ref var obstacleTransform = ref TransformPool.Get(entity);
+                    
+                    
+                }
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Leopotam.EcsLite;
+using System.Runtime.CompilerServices;
 using static Globals;
 
 public static class Pools
@@ -14,19 +15,36 @@ public static class Pools
     public static EcsPool<Temporary>           TempPool;
     public static EcsPool<FollowTarget>        FollowPool;
     public static EcsPool<Movable>             MovablePool;
-    
+    public static EcsPool<AiAgent>             AiAgentPool;
+        
     public static void InitPools()
     {
-        TransformPool   = MainWorld.GetPool<Transform>();
-        GoReferencePool = MainWorld.GetPool<GameObjectReference>();
-        ShipPool        = MainWorld.GetPool<Ship>();
-        PlayerPool      = MainWorld.GetPool<Player>();
-        DestroyPool     = MainWorld.GetPool<Destroy>();
-        BulletPool      = MainWorld.GetPool<Bullet>();
-        DamagePool      = MainWorld.GetPool<Damage>();
-        HealthPool      = MainWorld.GetPool<Health>();
-        TempPool        = MainWorld.GetPool<Temporary>();
-        FollowPool      = MainWorld.GetPool<FollowTarget>();
-        MovablePool     = MainWorld.GetPool<Movable>();
+        TransformPool     = MainWorld.GetPool<Transform>();
+        GoReferencePool   = MainWorld.GetPool<GameObjectReference>();
+        ShipPool          = MainWorld.GetPool<Ship>();
+        PlayerPool        = MainWorld.GetPool<Player>();
+        DestroyPool       = MainWorld.GetPool<Destroy>();
+        BulletPool        = MainWorld.GetPool<Bullet>();
+        DamagePool        = MainWorld.GetPool<Damage>();
+        HealthPool        = MainWorld.GetPool<Health>();
+        TempPool          = MainWorld.GetPool<Temporary>();
+        FollowPool        = MainWorld.GetPool<FollowTarget>();
+        MovablePool       = MainWorld.GetPool<Movable>();
+        AiAgentPool       = MainWorld.GetPool<AiAgent>();
     }
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool DelComponentIfExist<T>(EcsPool<T> pool, int entity)
+    where T : struct
+    {
+        if(pool.Has(entity))
+        {
+            pool.Del(entity);
+            return true;
+        }
+        
+        return false;
+    }    
 }
+

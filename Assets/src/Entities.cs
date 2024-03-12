@@ -5,6 +5,92 @@ using static Queries;
 using UnityEngine;
 using static Globals;
 
+public struct Transform
+{
+    public float      orientation;
+    public Vector3    position;
+    public Vector3    scale;
+}
+
+public struct GameObjectReference
+{
+    public Entity                 go;
+    public UnityEngine.Transform  transform;
+}
+
+public struct Movable
+{
+    public Vector3 direction;
+    public Vector3 velocity;
+}
+
+public struct Ship
+{
+    public Vector3 lookDirection;
+    public Vector2 size;
+    public float   rotationSpeed;
+    public float   maxSpeed;
+    public float   acceleration;
+    public float   reloadTime;
+    public float   reloadProgress;
+    public bool    shooting;
+    public int     projectileId; // projectileId in projectiles table    
+}
+
+public struct Player
+{
+    
+}
+
+public struct Destroy
+{
+    
+}
+
+public struct Bullet
+{
+    public float   speed;
+    public float   radius;
+    public int     damage;
+    public int     sender;
+    public bool    canDamageSender;
+}
+
+public struct Temporary
+{
+    public float timeToLive;
+    public float timePassed;
+}
+
+public struct Health
+{
+    public int current;
+    public int max;
+}
+
+public struct Damage
+{
+    public int amount;
+}
+
+
+//AI
+
+public struct AiAgent
+{
+    public Vector3 velocity;
+    public Vector3 steering;
+    public float   acceleration;
+    public float   maxSpeed;
+    public float   radius;
+    public float   fov;
+}
+
+public struct FollowTarget
+{
+    public int   target;
+    public float distance;
+}
 
 public enum EntityType
 {
@@ -12,8 +98,71 @@ public enum EntityType
     Projectile
 }
 
+[System.Serializable]
+public struct ShipConfig
+{
+    public Vector2 size;
+    public float   rotationSpeed;
+    public float   maxSpeed;
+    public float   acceleration;
+    public float   reloadTime;
+    public int     maxHp;
+    public int     projectileId;
+    public int     prefabId;
+}
+
+public enum ProjectileType
+{
+    Bullet,
+    Rocket,
+    Laser
+}
+
+[System.Serializable]
+public struct UnitedProjectile
+{
+    public ProjectileType type;
+    public int            prefabId; // prefab id in prefab table
+    public int            damage;
+    public bool           canDamageSender;
+    public float          speed;
+    public float          radius;
+    public float          timeToLive;
+}
+
 public static class Entities
 {
+    public static void CreatePlayer(Vector3 position, int assetId)
+    {
+        var entity = CreateEntity(EntityType.Ship, position, assetId);
+        
+        PlayerPool.Add(entity);
+    }
+    
+    public static void CreateMultipleShipsRandomly(int count, float radius)
+    {
+        for(var i = 0; i < count; ++i)
+        {
+            var entity = CreateEntity(EntityType.Ship, Random.insideUnitCircle * radius, Random.Range(0, ShipAssetTable.Length));
+            
+            ref var movable  = ref MovablePool.Get(entity);
+            ref var follow   = ref FollowPool.Add(entity);
+            
+            follow.target   = 0;
+            follow.distance = 5f;
+
+            movable.direction = Random.insideUnitCircle.normalized;
+        }
+    }
+    
+    public static void CreateProjectile(Vector3 position, Vector3 direction, int owner, int assetId)
+    {        
+        var orientation = Mathf.Atan2(direction.y, direction.x);
+        var entity      = CreateEntity(EntityType.Projectile, position, orientation, Vector3.one, assetId);
+        ref var bullet = ref BulletPool.Get(entity);
+        bullet.sender = owner;
+    }
+    
     public static int CreateEntity(EntityType type, int assetId)
     {
         return CreateEntity(type, Vector3.zero, 0, Vector3.one, assetId);
@@ -110,17 +259,17 @@ public static class Entities
     public static void CreateReference(int entity, EntityType type, Vector3 position, float orientation, Vector3 scale, Entity prefab)
     {
         ref var transform = ref TransformPool.Add(entity);
-        ref var goRef = ref GoReferencePool.Add(entity);
+        ref var goRef     = ref GoReferencePool.Add(entity);
         
-        transform.position = position;
+        transform.position    = position;
         transform.orientation = orientation;
-        transform.scale = scale;
+        transform.scale       = scale;
         
         var go = Object.Instantiate(prefab, position, Quaternion.AngleAxis(orientation, Vector3.forward));
         
-        go.Id = entity;
-        go.Type = type;
-        goRef.go = go;
+        go.Id           = entity;
+        go.Type         = type;
+        goRef.go        = go;
         goRef.transform = go.transform;
     }
     
@@ -196,4 +345,100 @@ public static class Entities
             transform.position += movable.velocity * dt;
         }
     }
+    
+    private static Collider2D[] shipColisionResults = new Collider2D[32];
+    public static void UpdateShips(float dt)
+    {
+        foreach(var entity in ShipsQuery)
+        {
+            ref var ship      = ref ShipPool.Get(entity);
+            ref var transform = ref TransformPool.Get(entity);
+            ref var movable   = ref MovablePool.Get(entity);
+            
+            movable.velocity = Vector3.ClampMagnitude(movable.velocity + movable.direction * ship.acceleration * dt, ship.maxSpeed);
+            
+            //Rotate
+            
+            var angle = Mathf.Atan2(ship.lookDirection.y, ship.lookDirection.x) * Mathf.Rad2Deg;
+            
+            transform.orientation = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            
+            //handle collisions
+            var collisionsCount = Physics2D.OverlapBoxNonAlloc(transform.position, ship.size, transform.orientation, shipColisionResults);
+            
+            for(var i = 0; i < collisionsCount; ++i)
+            {
+                var coll = shipColisionResults[i];
+                
+                if(coll.TryGetComponent(out Entity collidedEntity))
+                {
+                    if(collidedEntity.Id == entity)
+                        continue;
+                        
+                    if(collidedEntity.Type == EntityType.Ship)
+                    {
+                        //TODO: Handle collisions properly
+                        DestroyEntity(entity);
+                        DestroyEntity(collidedEntity.Id);
+                        return;
+                    }
+                }
+            }
+            
+            //tick reloading
+            ship.reloadProgress += dt;
+            
+            //shoot if can            
+            if(ship.shooting && ship.reloadProgress >= ship.reloadTime)
+            {
+                var orientation = transform.orientation * Mathf.Deg2Rad;
+                var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
+                CreateProjectile(transform.position + direction * 1f, direction, entity, ship.projectileId);
+                ship.reloadProgress = 0f;
+            }
+        }
+    }
+    
+    
+    private static Collider2D[] results = new Collider2D[32];
+    public static void UpdateBullets()
+    {
+        foreach(var entity in BulletsQuery)
+        {
+            ref var transform = ref TransformPool.Get(entity);
+            ref var bullet    = ref BulletPool.Get(entity);
+            
+            var collCount = Physics2D.OverlapCircleNonAlloc(transform.position, bullet.radius, results);
+            
+            for(var i = 0; i < collCount; ++i)
+            {
+                var coll = results[i];
+                
+                if(coll.TryGetComponent(out Entity collidedEntity))
+                {
+                    //exclude ourself
+                    if(collidedEntity.Id == entity)
+                        continue;
+                
+                    //if hit sender
+                    if(collidedEntity.Id == bullet.sender)
+                    {
+                        if(bullet.canDamageSender == false)
+                            continue;
+                    }
+                    
+                    ApplyDamageToEntity(collidedEntity.Id, bullet.damage);
+                    DestroyEntity(entity);
+                    return;
+                }
+            }
+        }
+    }
 }
+
+
+
+
+
+
+// line to fix code editor bug :)
