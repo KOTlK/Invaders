@@ -9,9 +9,8 @@ public static class Ai
 {
     public static void UpdateAi(float dt)
     {
-        UpdateFollowers(dt);
         UpdatePatrol(dt);
-        // UpdateAgents(dt);
+        UpdateFollowers(dt);
     }
     
     public static void UpdateFollowers(float dt)
@@ -19,21 +18,38 @@ public static class Ai
         foreach(var entity in FollowQuery)
         {
             ref var follow    = ref FollowPool.Get(entity);
+            ref var hasTarget = ref TargetPool.Get(entity);
             
-            if(DestroyPool.Has(follow.target))
+            if(DestroyPool.Has(hasTarget.targetEntity))
             {
                 FollowPool.Del(entity);
+                TargetPool.Del(entity);
                 continue;
             }
                 
             ref var ship            = ref ShipPool.Get(entity);
             ref var transform       = ref TransformPool.Get(entity);
-            ref var targetTransform = ref TransformPool.Get(follow.target);
+            ref var targetTransform = ref TransformPool.Get(hasTarget.targetEntity);
             ref var movement        = ref MovementPool.Get(entity);
             
             var directionToTarget = targetTransform.position - transform.position;
-            var direction = directionToTarget; 
-            var steering  = new Steering();
+            var direction         = directionToTarget;
+            var distance          = direction.magnitude;
+            
+            if(distance > follow.maxDistance)
+            {
+                ref var patrol = ref PatrolPool.Add(entity);
+                ref var ai     = ref AiPool.Get(entity);
+                
+                patrol.destination  = RandomPointInsideWorldBounds();
+                patrol.searchRadius = ai.searchRadius;
+                
+                FollowPool.Del(entity);
+                TargetPool.Del(entity);
+                continue;
+            }
+            
+            var steering          = new Steering();
             
             direction.Normalize();
             
@@ -54,13 +70,11 @@ public static class Ai
         }
     }
     
-    public static void UpdateAgents(float dt)
-    {
-    }
-    
     private const float DestinationEpsilon = 0.01f;
     private const float SlowRadius         = 2f;
     private const float TimeToTarget       = 10f;
+    
+    private static Collider2D[] CollisionBuffer = new Collider2D[64];
     
     public static void UpdatePatrol(float dt)
     {
@@ -70,6 +84,39 @@ public static class Ai
             ref var transform = ref TransformPool.Get(entity);
             ref var patrol    = ref PatrolPool.Get(entity);
             ref var movement  = ref MovementPool.Get(entity);
+            ref var ai        = ref AiPool.Get(entity);
+            
+
+            var collCount = Physics2D.OverlapCircleNonAlloc(transform.position, ai.searchRadius, CollisionBuffer);
+            
+            var exit = false;
+            for(var i = 0; i < collCount; ++i)
+            {
+                var coll = CollisionBuffer[i];
+                
+                if(coll.TryGetComponent(out Entity targetEntity))
+                {
+                    if(targetEntity.Id == entity)
+                        continue;
+                        
+                    if(targetEntity.Type == EntityType.Ship || targetEntity.Type == EntityType.Player)
+                    {
+                        ref var hasTarget = ref TargetPool.Add(entity);
+                        ref var follow    = ref FollowPool.Add(entity);
+                        
+                        hasTarget.targetEntity = targetEntity.Id;
+                        follow.distance        = ai.followDistance;
+                        follow.maxDistance     = ai.maxFollowDistance;
+                        
+                        PatrolPool.Del(entity);
+                        exit = true;
+                        break;
+                    }
+                }
+            }
+            
+            if(exit)
+                continue;
             
             var direction   = patrol.destination - transform.position;
             var distance    = direction.magnitude;

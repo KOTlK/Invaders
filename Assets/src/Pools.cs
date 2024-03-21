@@ -16,6 +16,8 @@ public static class Pools
     public static EcsPool<FollowTarget>        FollowPool;
     public static EcsPool<Movement>            MovementPool;
     public static EcsPool<Patrol>              PatrolPool;
+    public static EcsPool<HasTarget>           TargetPool;
+    public static EcsPool<AiShip>              AiPool;
     
         
     public static void InitPools()
@@ -32,6 +34,8 @@ public static class Pools
         FollowPool        = MainWorld.GetPool<FollowTarget>();
         MovementPool      = MainWorld.GetPool<Movement>();
         PatrolPool        = MainWorld.GetPool<Patrol>();
+        TargetPool        = MainWorld.GetPool<HasTarget>();
+        AiPool            = MainWorld.GetPool<AiShip>();
     }
     
     

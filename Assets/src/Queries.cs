@@ -23,8 +23,8 @@ public static class Queries
         BulletsQuery             = MainWorld.Filter<Bullet>().Inc<Transform>().Inc<Movement>().Exc<Destroy>().End();
         DamageQuery              = MainWorld.Filter<Health>().Inc<Damage>().Exc<Destroy>().End();
         TempQuery                = MainWorld.Filter<Temporary>().Exc<Destroy>().End();
-        FollowQuery              = MainWorld.Filter<FollowTarget>().Inc<Transform>().Inc<Ship>().Exc<Destroy>().End();
+        FollowQuery              = MainWorld.Filter<FollowTarget>().Inc<HasTarget>().Inc<AiShip>().Inc<Transform>().Inc<Ship>().Exc<Destroy>().End();
         MoveQuery                = MainWorld.Filter<Movement>().Inc<Transform>().Exc<Destroy>().Exc<Player>().End();
-        PatrolQuery              = MainWorld.Filter<Transform>().Inc<Movement>().Inc<Ship>().Inc<Patrol>().Exc<Destroy>().End();
+        PatrolQuery              = MainWorld.Filter<Transform>().Inc<Movement>().Inc<AiShip>().Inc<Ship>().Inc<Patrol>().Exc<Destroy>().End();
     }
 }

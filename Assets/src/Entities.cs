@@ -87,15 +87,34 @@ public struct Damage
 
 public struct FollowTarget
 {
-    public int   target;
     public float distance;
+    public float maxDistance;
 }
 
 public struct Patrol
 {
     public Vector3 destination;
+    public float   searchRadius;
 }
 
+public struct HasTarget
+{
+    public int targetEntity;
+}
+
+[System.Serializable]
+public struct AiShip
+{
+    public float followDistance;
+    public float maxFollowDistance;
+    public float searchRadius;
+}
+
+[System.Serializable]
+public struct AiSettings
+{
+    public AiShip shipSettings;
+}
 
 [System.Serializable]
 public struct ShipConfig
@@ -109,6 +128,8 @@ public struct ShipConfig
     public int     maxHp;
     public int     projectileId;
     public int     prefabId;
+    
+    public AiSettings  aiSettings;
 }
 
 public enum ProjectileType
@@ -189,6 +210,7 @@ public static class Entities
                 ref var ship     = ref ShipPool.Add(entity);
                 ref var hp       = ref HealthPool.Add(entity);
                 ref var movement = ref MovementPool.Add(entity);
+                ref var ai       = ref AiPool.Add(entity);
                 
                 ship.size           = asset.size;
                 ship.reloadTime     = asset.reloadTime;
@@ -203,6 +225,8 @@ public static class Entities
                 
                 movement.velocity   = Vector3.zero;
                 movement.steering   = new Steering{linear = Vector3.zero, angular = 0f};
+                
+                ai = asset.aiSettings.shipSettings;
                 
                 CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
             }
