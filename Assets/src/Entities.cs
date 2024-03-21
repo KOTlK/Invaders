@@ -4,6 +4,8 @@ using static Pools;
 using static Queries;
 using UnityEngine;
 using static Globals;
+using static World;
+using static Vars;
 
 public struct Transform
 {
@@ -18,19 +20,27 @@ public struct GameObjectReference
     public UnityEngine.Transform  transform;
 }
 
-public struct Movable
+public struct Movement
 {
-    public Vector3 direction;
-    public Vector3 velocity;
+    public Vector3  velocity;
+    public float    rotation;
+    public Steering steering;
+}
+
+[System.Serializable]
+public struct Steering
+{
+    public Vector3 linear;
+    public float   angular;
 }
 
 public struct Ship
 {
-    public Vector3 lookDirection;
     public Vector2 size;
     public float   rotationSpeed;
     public float   maxSpeed;
     public float   acceleration;
+    public float   damping;
     public float   reloadTime;
     public float   reloadProgress;
     public bool    shooting;
@@ -39,7 +49,9 @@ public struct Ship
 
 public struct Player
 {
-    
+    public Vector3 lookDirection;
+    public Vector3 moveDirection;
+    public Vector3 velocity;
 }
 
 public struct Destroy
@@ -73,30 +85,17 @@ public struct Damage
     public int amount;
 }
 
-
-//AI
-
-public struct AiAgent
-{
-    public Vector3 velocity;
-    public Vector3 steering;
-    public float   acceleration;
-    public float   maxSpeed;
-    public float   radius;
-    public float   fov;
-}
-
 public struct FollowTarget
 {
     public int   target;
     public float distance;
 }
 
-public enum EntityType
+public struct Patrol
 {
-    Ship,
-    Projectile
+    public Vector3 destination;
 }
+
 
 [System.Serializable]
 public struct ShipConfig
@@ -105,6 +104,7 @@ public struct ShipConfig
     public float   rotationSpeed;
     public float   maxSpeed;
     public float   acceleration;
+    public float   damping;
     public float   reloadTime;
     public int     maxHp;
     public int     projectileId;
@@ -130,28 +130,29 @@ public struct UnitedProjectile
     public float          timeToLive;
 }
 
+public enum EntityType
+{
+    Ship,
+    Projectile,
+    Player
+}
+
 public static class Entities
 {
     public static void CreatePlayer(Vector3 position, int assetId)
     {
-        var entity = CreateEntity(EntityType.Ship, position, assetId);
-        
-        PlayerPool.Add(entity);
+        var entity = CreateEntity(EntityType.Player, position, assetId);        
     }
     
-    public static void CreateMultipleShipsRandomly(int count, float radius)
+    public static void CreateMultipleShipsRandomly(int count)
     {
         for(var i = 0; i < count; ++i)
         {
-            var entity = CreateEntity(EntityType.Ship, Random.insideUnitCircle * radius, Random.Range(0, ShipAssetTable.Length));
+            var entity = CreateEntity(EntityType.Ship, RandomPointInsideWorldBounds(), Random.Range(0, ShipAssetTable.Length));
             
-            ref var movable  = ref MovablePool.Get(entity);
-            ref var follow   = ref FollowPool.Add(entity);
+            ref var patrol = ref PatrolPool.Add(entity);
             
-            follow.target   = 0;
-            follow.distance = 5f;
-
-            movable.direction = Random.insideUnitCircle.normalized;
+            patrol.destination = RandomPointInsideWorldBounds();
         }
     }
     
@@ -185,22 +186,23 @@ public static class Entities
                 var asset  = ShipAssetTable[assetId];
                 var prefab = PrefabTable[asset.prefabId];
                 
-                ref var ship    = ref ShipPool.Add(entity);
-                ref var hp      = ref HealthPool.Add(entity);
-                ref var movable = ref MovablePool.Add(entity);
+                ref var ship     = ref ShipPool.Add(entity);
+                ref var hp       = ref HealthPool.Add(entity);
+                ref var movement = ref MovementPool.Add(entity);
                 
-                ship.size          = asset.size;
-                ship.rotationSpeed = asset.rotationSpeed;
-                ship.maxSpeed      = asset.maxSpeed;
-                ship.acceleration  = asset.acceleration;
-                ship.reloadTime    = asset.reloadTime;
-                ship.projectileId  = asset.projectileId;
+                ship.size           = asset.size;
+                ship.reloadTime     = asset.reloadTime;
+                ship.projectileId   = asset.projectileId;
+                ship.rotationSpeed  = asset.rotationSpeed;
+                ship.maxSpeed       = asset.maxSpeed;
+                ship.acceleration   = asset.acceleration;
+                ship.damping        = asset.damping;
                 
-                hp.current = asset.maxHp;
-                hp.max     = asset.maxHp;
+                hp.current          = asset.maxHp;
+                hp.max              = asset.maxHp;
                 
-                movable.direction = Vector3.zero;
-                movable.velocity  = Vector3.zero;
+                movement.velocity   = Vector3.zero;
+                movement.steering   = new Steering{linear = Vector3.zero, angular = 0f};
                 
                 CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
             }
@@ -215,9 +217,9 @@ public static class Entities
                 {
                     case ProjectileType.Bullet:
                     {
-                        ref var bullet  = ref BulletPool.Add(entity);
-                        ref var temp    = ref TempPool.Add(entity);
-                        ref var movable = ref MovablePool.Add(entity);
+                        ref var bullet   = ref BulletPool.Add(entity);
+                        ref var temp     = ref TempPool.Add(entity);
+                        ref var movement = ref MovementPool.Add(entity);
                         //in this case orientation passed as radians, not degrees. otherwise there will be unnecessary translations.
                         var direction = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
                         
@@ -231,7 +233,8 @@ public static class Entities
                         temp.timeToLive = asset.timeToLive;
                         temp.timePassed = 0;
                         
-                        movable.velocity = direction * asset.speed;
+                        movement.velocity = direction * asset.speed;
+                        movement.steering.angular = 0f;
                     }
                     break;
                     
@@ -249,6 +252,30 @@ public static class Entities
                 }
                 
                 CreateReference(entity, EntityType.Projectile, position, orientation, scale, prefab);
+            }
+            break;
+            
+            case EntityType.Player:
+            {
+                var asset  = ShipAssetTable[assetId];
+                var prefab = PrefabTable[asset.prefabId];
+                
+                ref var ship     = ref ShipPool.Add(entity);
+                ref var hp       = ref HealthPool.Add(entity);
+                PlayerPool.Add(entity);
+                
+                ship.size          = asset.size;
+                ship.rotationSpeed = asset.rotationSpeed;
+                ship.maxSpeed      = asset.maxSpeed;
+                ship.acceleration  = asset.acceleration;
+                ship.damping       = asset.damping;
+                ship.reloadTime    = asset.reloadTime;
+                ship.projectileId  = asset.projectileId;
+                
+                hp.current = asset.maxHp;
+                hp.max     = asset.maxHp;
+                
+                CreateReference(entity, EntityType.Player, position, orientation, scale, prefab);
             }
             break;
         }
@@ -339,10 +366,48 @@ public static class Entities
     {
         foreach(var entity in MoveQuery)
         {
-            ref var movable   = ref MovablePool.Get(entity);
+            ref var movement  = ref MovementPool.Get(entity);
             ref var transform = ref TransformPool.Get(entity);
             
-            transform.position += movable.velocity * dt;
+            transform.position    += movement.velocity * dt;
+            transform.orientation += movement.steering.angular;
+            
+            movement.velocity += movement.steering.linear * dt;
+        }
+    }
+    
+    public static void UpdatePlayer(float dt)
+    {
+        foreach(var entity in PlayerShipQuery)
+        {
+            ref var ship      = ref ShipPool.Get(entity);
+            ref var transform = ref TransformPool.Get(entity);
+            ref var player    = ref PlayerPool.Get(entity);
+            
+            if(player.moveDirection.x == 0)
+            {
+                player.velocity.x = Mathf.MoveTowards(player.velocity.x, 0, ship.damping * dt);
+            } else
+            {
+                player.velocity.x += player.moveDirection.x * ship.acceleration * dt;
+            }
+            
+            if(player.moveDirection.y == 0)
+            {
+                player.velocity.y = Mathf.MoveTowards(player.velocity.y, 0, ship.damping * dt);
+            }else
+            {
+                player.velocity.y += player.moveDirection.y * ship.acceleration * dt;
+            }
+            
+            player.velocity = Vector3.ClampMagnitude(player.velocity, ship.maxSpeed);
+            
+            var angle = Mathf.Atan2(player.lookDirection.y, player.lookDirection.x) * Mathf.Rad2Deg;
+            var targetOrientation = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            targetOrientation -= transform.orientation;
+            
+            transform.position    += player.velocity * dt;
+            transform.orientation += targetOrientation;
         }
     }
     
@@ -353,15 +418,6 @@ public static class Entities
         {
             ref var ship      = ref ShipPool.Get(entity);
             ref var transform = ref TransformPool.Get(entity);
-            ref var movable   = ref MovablePool.Get(entity);
-            
-            movable.velocity = Vector3.ClampMagnitude(movable.velocity + movable.direction * ship.acceleration * dt, ship.maxSpeed);
-            
-            //Rotate
-            
-            var angle = Mathf.Atan2(ship.lookDirection.y, ship.lookDirection.x) * Mathf.Rad2Deg;
-            
-            transform.orientation = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             
             //handle collisions
             var collisionsCount = Physics2D.OverlapBoxNonAlloc(transform.position, ship.size, transform.orientation, shipColisionResults);
@@ -378,9 +434,16 @@ public static class Entities
                     if(collidedEntity.Type == EntityType.Ship)
                     {
                         //TODO: Handle collisions properly
-                        DestroyEntity(entity);
-                        DestroyEntity(collidedEntity.Id);
-                        return;
+                        if((PlayerPool.Has(collidedEntity.Id) || PlayerPool.Has(entity)) && PlayerInvisible)
+                        {
+                            
+                        }else
+                        {
+                            DestroyEntity(entity);
+                            DestroyEntity(collidedEntity.Id);
+                            continue;
+                        }
+                        
                     }
                 }
             }

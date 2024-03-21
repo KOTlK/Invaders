@@ -14,8 +14,9 @@ public static class Pools
     public static EcsPool<Health>              HealthPool;
     public static EcsPool<Temporary>           TempPool;
     public static EcsPool<FollowTarget>        FollowPool;
-    public static EcsPool<Movable>             MovablePool;
-    public static EcsPool<AiAgent>             AiAgentPool;
+    public static EcsPool<Movement>            MovementPool;
+    public static EcsPool<Patrol>              PatrolPool;
+    
         
     public static void InitPools()
     {
@@ -29,8 +30,8 @@ public static class Pools
         HealthPool        = MainWorld.GetPool<Health>();
         TempPool          = MainWorld.GetPool<Temporary>();
         FollowPool        = MainWorld.GetPool<FollowTarget>();
-        MovablePool       = MainWorld.GetPool<Movable>();
-        AiAgentPool       = MainWorld.GetPool<AiAgent>();
+        MovementPool      = MainWorld.GetPool<Movement>();
+        PatrolPool        = MainWorld.GetPool<Patrol>();
     }
     
     

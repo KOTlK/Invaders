@@ -1,0 +1,1 @@
+PlayerInvisible 1

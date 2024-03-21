@@ -1,17 +1,20 @@
 using static Pools;
 using static Queries;
 using static Entities;
+using static World;
 using UnityEngine;
+using static Vars;
 
 public static class Ai
 {
-    public static void UpdateAi()
+    public static void UpdateAi(float dt)
     {
-        UpdateFollowers();
-        // UpdateSteering();
+        UpdateFollowers(dt);
+        UpdatePatrol(dt);
+        // UpdateAgents(dt);
     }
     
-    public static void UpdateFollowers()
+    public static void UpdateFollowers(float dt)
     {
         foreach(var entity in FollowQuery)
         {
@@ -23,11 +26,14 @@ public static class Ai
                 continue;
             }
                 
-            ref var movable         = ref MovablePool.Get(entity);
+            ref var ship            = ref ShipPool.Get(entity);
             ref var transform       = ref TransformPool.Get(entity);
             ref var targetTransform = ref TransformPool.Get(follow.target);
+            ref var movement        = ref MovementPool.Get(entity);
             
-            var direction = targetTransform.position - transform.position;
+            var directionToTarget = targetTransform.position - transform.position;
+            var direction = directionToTarget; 
+            var steering  = new Steering();
             
             direction.Normalize();
             
@@ -37,38 +43,72 @@ public static class Ai
             
             direction.Normalize();
             
-            movable.direction = direction;
+            var angle = Mathf.Atan2(directionToTarget.y, directionToTarget.x) * Mathf.Rad2Deg;
+            
+            var target = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            
+            steering.linear = direction * ship.acceleration;
+            steering.angular = target - transform.orientation;
+            
+            movement.steering = steering;
         }
     }
     
-    private static Collider2D[] obstacleColliders = new Collider2D[64];
-    public static void UpdateObstacleAvoidance()
+    public static void UpdateAgents(float dt)
     {
-        foreach(var entity in AiAgentsQuery)
-        {
-            ref var transform = ref TransformPool.Get(entity);
-            ref var movable   = ref MovablePool.Get(entity);
-            ref var agent     = ref AiAgentPool.Get(entity);
-            
-            var direction = movable.direction;
-            
-            var obstaclesCount = Physics2D.OverlapCircleNonAlloc(transform.position, agent.radius, obstacleColliders);
-            
-            for(var i = 0; i < obstaclesCount; ++i)
-            {
-                var coll = obstacleColliders[i];
-                
-                if(coll.TryGetComponent(out Entity obstacleEntity))
-                {
-                    if(obstacleEntity.Id == entity)
-                        continue;
-                        
-                    ref var obstacleMovable   = ref MovablePool.Get(entity);
-                    ref var obstacleTransform = ref TransformPool.Get(entity);
-                    
-                    
-                }
-            }
-        }
     }
+    
+    private const float DestinationEpsilon = 0.01f;
+    private const float SlowRadius         = 2f;
+    private const float TimeToTarget       = 10f;
+    
+    public static void UpdatePatrol(float dt)
+    {
+        foreach(var entity in PatrolQuery)
+        {
+            ref var ship      = ref ShipPool.Get(entity);
+            ref var transform = ref TransformPool.Get(entity);
+            ref var patrol    = ref PatrolPool.Get(entity);
+            ref var movement  = ref MovementPool.Get(entity);
+            
+            var direction   = patrol.destination - transform.position;
+            var distance    = direction.magnitude;
+            var targetSpeed = 0f;
+            var steering    = new Steering();
+            
+            if(distance <= DestinationEpsilon)
+            {
+                patrol.destination = RandomPointInsideWorldBounds();
+                continue;
+            }
+            
+            if(distance > SlowRadius)
+            {
+                targetSpeed = ship.acceleration;
+            }else
+            {
+                targetSpeed = ship.acceleration * distance / SlowRadius;
+            }
+            
+            var targetVelocity = direction.normalized * targetSpeed;
+            
+            steering.linear = targetVelocity - movement.velocity;
+            steering.linear *= TimeToTarget;
+            
+            if(steering.linear.sqrMagnitude > ship.maxSpeed * ship.maxSpeed)
+            {
+                steering.linear.Normalize();
+                steering.linear *= ship.acceleration;
+            }
+            
+            
+            var angle = Mathf.Atan2(movement.velocity.y, movement.velocity.x) * Mathf.Rad2Deg;
+            
+            var target = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            
+            steering.angular = target - transform.orientation;
+            
+            movement.steering = steering;
+        }
+    } 
 }

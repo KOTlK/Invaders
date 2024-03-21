@@ -13,6 +13,8 @@ using Leopotam.EcsLite.UnityEditor;
 
 public class Startup : MonoBehaviour
 {
+    public TextAsset          VarsAsset;
+    public Vector3            WorldSize = new Vector3(100, 100, 0);
     public Camera             Camera;
     public UnitedProjectile[] ProjectilesTable;
     public Entity[]           PrefabsTable;
@@ -32,9 +34,12 @@ public class Startup : MonoBehaviour
         Assets.PrefabTable = PrefabsTable;
         Assets.ShipAssetTable = ShipsAssetsTable;
         Assets.ProjectileTable = ProjectilesTable;
+        World.Size = WorldSize;
         
         CreatePlayer(Vector3.zero, 0);
-        CreateMultipleShipsRandomly(ShipsCount, 30f);
+        CreateMultipleShipsRandomly(ShipsCount);
+        
+        Vars.ParseVars(VarsAsset);
         
         #if UNITY_EDITOR
         _debugSystems = new EcsSystems(MainWorld);
@@ -48,9 +53,10 @@ public class Startup : MonoBehaviour
     {
         var dt = Time.deltaTime;
         
-        UpdateInput();
+        UpdateInput(dt);
 
-        UpdateAi();
+        UpdateAi(dt);
+        UpdatePlayer(dt);
         
         DestroyQueuedEntities();
 
