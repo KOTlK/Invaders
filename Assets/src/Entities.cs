@@ -43,6 +43,7 @@ public struct Ship
     public float   damping;
     public float   reloadTime;
     public float   reloadProgress;
+    public float   weaponRange;
     public bool    shooting;
     public int     projectileId; // projectileId in projectiles table    
 }
@@ -102,11 +103,24 @@ public struct HasTarget
     public int targetEntity;
 }
 
+public struct HoldDistance
+{
+    public float distance;
+    public float max;
+}
+
+public struct Engage
+{
+    public float weaponRange;
+}
+
 [System.Serializable]
 public struct AiShip
 {
     public float followDistance;
     public float maxFollowDistance;
+    public float holdDistance;
+    public float maxHoldDistance;
     public float searchRadius;
 }
 
@@ -125,6 +139,7 @@ public struct ShipConfig
     public float   acceleration;
     public float   damping;
     public float   reloadTime;
+    public float   weaponRange;
     public int     maxHp;
     public int     projectileId;
     public int     prefabId;
@@ -177,11 +192,15 @@ public static class Entities
         }
     }
     
-    public static void CreateProjectile(Vector3 position, Vector3 direction, int owner, int assetId)
+    public static void CreateProjectile(Vector3 position, Vector3 direction, float maxDistance, int owner, int assetId)
     {        
         var orientation = Mathf.Atan2(direction.y, direction.x);
         var entity      = CreateEntity(EntityType.Projectile, position, orientation, Vector3.one, assetId);
         ref var bullet = ref BulletPool.Get(entity);
+        ref var temp   = ref TempPool.Get(entity);
+        
+        temp.timeToLive = maxDistance / bullet.speed;
+        
         bullet.sender = owner;
     }
     
@@ -214,6 +233,7 @@ public static class Entities
                 
                 ship.size           = asset.size;
                 ship.reloadTime     = asset.reloadTime;
+                ship.weaponRange    = asset.weaponRange;
                 ship.projectileId   = asset.projectileId;
                 ship.rotationSpeed  = asset.rotationSpeed;
                 ship.maxSpeed       = asset.maxSpeed;
@@ -254,7 +274,6 @@ public static class Entities
                         bullet.damage          = asset.damage;
                         bullet.canDamageSender = asset.canDamageSender;   
                         
-                        temp.timeToLive = asset.timeToLive;
                         temp.timePassed = 0;
                         
                         movement.velocity = direction * asset.speed;
@@ -290,6 +309,7 @@ public static class Entities
                 
                 ship.size          = asset.size;
                 ship.rotationSpeed = asset.rotationSpeed;
+                ship.weaponRange   = asset.weaponRange;
                 ship.maxSpeed      = asset.maxSpeed;
                 ship.acceleration  = asset.acceleration;
                 ship.damping       = asset.damping;
@@ -480,7 +500,7 @@ public static class Entities
             {
                 var orientation = transform.orientation * Mathf.Deg2Rad;
                 var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
-                CreateProjectile(transform.position + direction * 1f, direction, entity, ship.projectileId);
+                CreateProjectile(transform.position + direction * 1f, direction, ship.weaponRange, entity, ship.projectileId);
                 ship.reloadProgress = 0f;
             }
         }
@@ -511,6 +531,12 @@ public static class Entities
                     if(collidedEntity.Id == bullet.sender)
                     {
                         if(bullet.canDamageSender == false)
+                            continue;
+                    }
+                    
+                    if(collidedEntity.Type == EntityType.Player)
+                    {
+                        if(PlayerInvisible)
                             continue;
                     }
                     

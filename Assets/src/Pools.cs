@@ -18,6 +18,8 @@ public static class Pools
     public static EcsPool<Patrol>              PatrolPool;
     public static EcsPool<HasTarget>           TargetPool;
     public static EcsPool<AiShip>              AiPool;
+    public static EcsPool<HoldDistance>        HoldDistancePool;
+    public static EcsPool<Engage>              EngagePool;
     
         
     public static void InitPools()
@@ -36,6 +38,8 @@ public static class Pools
         PatrolPool        = MainWorld.GetPool<Patrol>();
         TargetPool        = MainWorld.GetPool<HasTarget>();
         AiPool            = MainWorld.GetPool<AiShip>();
+        HoldDistancePool  = MainWorld.GetPool<HoldDistance>();
+        EngagePool        = MainWorld.GetPool<Engage>();
     }
     
     
@@ -51,5 +55,19 @@ public static class Pools
         
         return false;
     }    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AddComponentIfNotExist<T>(EcsPool<T> pool, int entity, T component)
+    where T : struct
+    {
+        if(pool.Has(entity) == false)
+        {
+            ref var comp = ref pool.Add(entity);
+            comp = component;
+            return true;
+        }
+        
+        return false;
+    }
 }
 

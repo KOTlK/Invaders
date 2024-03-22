@@ -4,6 +4,8 @@ using static Entities;
 using static World;
 using UnityEngine;
 using static Vars;
+using static Assets;
+using static UnityEngine.Mathf;
 
 public static class Ai
 {
@@ -11,6 +13,66 @@ public static class Ai
     {
         UpdatePatrol(dt);
         UpdateFollowers(dt);
+        UpdateEngage(dt);
+    }
+
+
+    //Angle deviations in radians.
+    //Less MinAngleDeviation means that agent will roll counterclockwise around target. 
+    //Less MaxAngleDeviation means that agent will roll clockwise around target.
+    private const float MinAngleDeviation = -0.5f;
+    private const float MaxAngleDeviation = 1.5f;
+    
+    public static void UpdateEngage(float dt)
+    {
+        foreach(var entity in EngageQuery)
+        {
+            ref var target          = ref TargetPool.Get(entity);
+            ref var engage          = ref EngagePool.Get(entity);
+            ref var holdDistance    = ref HoldDistancePool.Get(entity);
+            ref var transform       = ref TransformPool.Get(entity);
+            ref var movement        = ref MovementPool.Get(entity);
+            ref var ship            = ref ShipPool.Get(entity);
+            ref var ai              = ref AiPool.Get(entity);
+            ref var targetTransform = ref TransformPool.Get(target.targetEntity);
+            
+            var targetVelocity = Vector3.zero;
+            
+            if(PlayerPool.Has(target.targetEntity))
+            {
+                targetVelocity = PlayerPool.Get(target.targetEntity).velocity;
+            }else
+            {
+                targetVelocity = MovementPool.Get(target.targetEntity).velocity;
+            }
+            
+            //move around target
+            var direction = transform.position - targetTransform.position;
+            var angle     = Atan2(direction.y, direction.x);
+            
+            angle += Random.Range(MinAngleDeviation, MaxAngleDeviation);
+            
+            var orientation          = new Vector3(Cos(angle), Sin(angle), 0) * holdDistance.distance;
+            var position             = targetTransform.position + orientation;
+            var directionToTargetPos = position - transform.position;
+            var steering             = new Steering(); 
+            var velocity             = directionToTargetPos.normalized * (ship.acceleration);
+            
+            steering.linear = velocity - movement.velocity;
+            
+            //aim at target
+            //TODO: aim at future target position not in current
+            var targetDirection = targetTransform.position - transform.position;
+            angle = Atan2(targetDirection.y, targetDirection.x) * Rad2Deg;
+            var angularRotation = MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            
+            steering.angular  = angularRotation - transform.orientation;
+            movement.steering = steering;
+            
+            //shoot at target
+            
+            ship.shooting = true;
+        }
     }
     
     public static void UpdateFollowers(float dt)
@@ -49,6 +111,20 @@ public static class Ai
                 continue;
             }
             
+            if(distance <= follow.distance)
+            {
+                ref var holdDistance = ref HoldDistancePool.Add(entity);
+                ref var engage       = ref EngagePool.Add(entity);
+                ref var ai           = ref AiPool.Get(entity);
+                
+                holdDistance.distance = ai.holdDistance;
+                holdDistance.max      = ai.maxHoldDistance;
+                engage.weaponRange    = ship.weaponRange;
+                
+                FollowPool.Del(entity);
+                continue;
+            }
+            
             var steering          = new Steering();
             
             direction.Normalize();
@@ -63,7 +139,7 @@ public static class Ai
             
             var target = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             
-            steering.linear = direction * ship.acceleration;
+            steering.linear = direction * ship.acceleration - movement.velocity;
             steering.angular = target - transform.orientation;
             
             movement.steering = steering;
@@ -142,7 +218,7 @@ public static class Ai
             steering.linear = targetVelocity - movement.velocity;
             steering.linear *= TimeToTarget;
             
-            if(steering.linear.sqrMagnitude > ship.maxSpeed * ship.maxSpeed)
+            if(steering.linear.sqrMagnitude > ship.acceleration * ship.acceleration)
             {
                 steering.linear.Normalize();
                 steering.linear *= ship.acceleration;

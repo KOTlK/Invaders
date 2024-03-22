@@ -394,13 +394,16 @@ MonoBehaviour:
     acceleration: 7
     damping: 7
     reloadTime: 0.2
+    weaponRange: 20
     maxHp: 100
     projectileId: 0
     prefabId: 0
     aiSettings:
       shipSettings:
-        followDistance: 8
-        maxFollowDistance: 13
+        followDistance: 12
+        maxFollowDistance: 20
+        holdDistance: 10
+        maxHoldDistance: 15
         searchRadius: 10
   - size: {x: 1, y: 1}
     rotationSpeed: 100
@@ -408,13 +411,16 @@ MonoBehaviour:
     acceleration: 5
     damping: 5
     reloadTime: 0.3
+    weaponRange: 20
     maxHp: 90
     projectileId: 0
     prefabId: 2
     aiSettings:
       shipSettings:
-        followDistance: 8
-        maxFollowDistance: 13
+        followDistance: 12
+        maxFollowDistance: 20
+        holdDistance: 10
+        maxHoldDistance: 15
         searchRadius: 10
   - size: {x: 2.51, y: 1.78}
     rotationSpeed: 60
@@ -422,15 +428,18 @@ MonoBehaviour:
     acceleration: 4
     damping: 5
     reloadTime: 0.7
+    weaponRange: 20
     maxHp: 150
     projectileId: 0
     prefabId: 3
     aiSettings:
       shipSettings:
-        followDistance: 8
-        maxFollowDistance: 13
+        followDistance: 12
+        maxFollowDistance: 20
+        holdDistance: 10
+        maxHoldDistance: 15
         searchRadius: 10
-  ShipsCount: 3
+  ShipsCount: 1
 --- !u!4 &1014251903
 Transform:
   m_ObjectHideFlags: 0

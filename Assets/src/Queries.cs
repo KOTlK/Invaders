@@ -13,6 +13,7 @@ public static class Queries
     public static EcsFilter FollowQuery;
     public static EcsFilter MoveQuery;
     public static EcsFilter PatrolQuery;
+    public static EcsFilter EngageQuery;
     
     public static void InitQueries()
     {
@@ -26,5 +27,6 @@ public static class Queries
         FollowQuery              = MainWorld.Filter<FollowTarget>().Inc<HasTarget>().Inc<AiShip>().Inc<Transform>().Inc<Ship>().Exc<Destroy>().End();
         MoveQuery                = MainWorld.Filter<Movement>().Inc<Transform>().Exc<Destroy>().Exc<Player>().End();
         PatrolQuery              = MainWorld.Filter<Transform>().Inc<Movement>().Inc<AiShip>().Inc<Ship>().Inc<Patrol>().Exc<Destroy>().End();
+        EngageQuery              = MainWorld.Filter<AiShip>().Inc<HoldDistance>().Inc<HasTarget>().Inc<Ship>().Inc<Movement>().Inc<Transform>().Inc<Engage>().Exc<Destroy>().End();
     }
 }
