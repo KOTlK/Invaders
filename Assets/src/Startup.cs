@@ -1,10 +1,13 @@
 using UnityEngine;
+using System;
+using System.Linq;
 using Leopotam.EcsLite;
 using static Globals;
 using static Sync;
 using static GameInput;
 using static Entities;
 using static Ai;
+using static Rendering;
 
 
 #if UNITY_EDITOR
@@ -19,6 +22,9 @@ public class Startup : MonoBehaviour
     public UnitedProjectile[] ProjectilesTable;
     public Entity[]           PrefabsTable;
     public ShipConfig[]       ShipsAssetsTable;
+    public Sprite[]           Sprites;
+    public Material[]         Materials;
+    public Texture            InstancedBulletTexture;
     public int                ShipsCount = 100;
     
     #if UNITY_EDITOR
@@ -31,10 +37,29 @@ public class Startup : MonoBehaviour
         MainCamera = Camera;
         Pools.InitPools();
         Queries.InitQueries();
-        Assets.PrefabTable = PrefabsTable;
-        Assets.ShipAssetTable = ShipsAssetsTable;
+        Assets.PrefabTable     = PrefabsTable;
+        Assets.ShipAssetTable  = ShipsAssetsTable;
         Assets.ProjectileTable = ProjectilesTable;
-        World.Size = WorldSize;
+        Assets.MaterialTable   = Materials;
+        World.Size             = WorldSize;
+        
+        
+        Assets.MeshTable = new Mesh[Sprites.Length];
+        
+        Assets.MaterialTable[0].SetTexture("_MainTex", InstancedBulletTexture);
+        
+        //convert sprites to meshes
+        for(var i = 0; i < Sprites.Length; ++i)
+        {
+            var mesh   = new Mesh();
+            var sprite = Sprites[i];
+            
+            mesh.SetVertices(Array.ConvertAll(sprite.vertices, i => (Vector3)i).ToList());
+            mesh.SetUVs(0, sprite.uv.ToList());
+            mesh.SetTriangles(Array.ConvertAll(sprite.triangles, i => (int)i), 0);
+            
+            Assets.MeshTable[i] = mesh;
+        }
         
         CreatePlayer(Vector3.zero, 0);
         CreateMultipleShipsRandomly(ShipsCount);
@@ -68,6 +93,8 @@ public class Startup : MonoBehaviour
         UpdateHealth();
         
         SyncReferences();
+        CreateObjectToWorld();
+        DrawBullets();
         
            
         #if UNITY_EDITOR

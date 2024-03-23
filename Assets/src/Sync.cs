@@ -17,4 +17,18 @@ public static class Sync
             reference.transform.localScale = transform.scale;
         }
     }
+    
+    public static void CreateObjectToWorld()
+    {
+        foreach(var entity in InstancesToSyncQuery)
+        {
+            ref var transform = ref TransformPool.Get(entity);
+            ref var instance  = ref InstancedPool.Get(entity);
+            
+            instance.objectToWorld = Matrix4x4.TRS(
+                transform.position, 
+                Quaternion.AngleAxis(transform.orientation, Vector3.forward),
+                transform.scale);
+        }
+    }
 }

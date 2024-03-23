@@ -20,6 +20,7 @@ public static class Pools
     public static EcsPool<AiShip>              AiPool;
     public static EcsPool<HoldDistance>        HoldDistancePool;
     public static EcsPool<Engage>              EngagePool;
+    public static EcsPool<Instanced>           InstancedPool;
     
         
     public static void InitPools()
@@ -40,6 +41,7 @@ public static class Pools
         AiPool            = MainWorld.GetPool<AiShip>();
         HoldDistancePool  = MainWorld.GetPool<HoldDistance>();
         EngagePool        = MainWorld.GetPool<Engage>();
+        InstancedPool     = MainWorld.GetPool<Instanced>();
     }
     
     

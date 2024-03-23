@@ -69,6 +69,13 @@ public struct Bullet
     public bool    canDamageSender;
 }
 
+public struct Instanced
+{
+    public Matrix4x4 objectToWorld;
+    public int       mesh; // mesh index in table
+    public int       material; // material index in table
+}
+
 public struct Temporary
 {
     public float timeToLive;
@@ -158,6 +165,9 @@ public enum ProjectileType
 public struct UnitedProjectile
 {
     public ProjectileType type;
+    public bool           instanced;
+    public int            mesh;
+    public int            material;
     public int            prefabId; // prefab id in prefab table
     public int            damage;
     public bool           canDamageSender;
@@ -196,12 +206,11 @@ public static class Entities
     {        
         var orientation = Mathf.Atan2(direction.y, direction.x);
         var entity      = CreateEntity(EntityType.Projectile, position, orientation, Vector3.one, assetId);
-        ref var bullet = ref BulletPool.Get(entity);
-        ref var temp   = ref TempPool.Get(entity);
+        ref var bullet  = ref BulletPool.Get(entity);
+        ref var temp    = ref TempPool.Get(entity);
         
         temp.timeToLive = maxDistance / bullet.speed;
-        
-        bullet.sender = owner;
+        bullet.sender   = owner;
     }
     
     public static int CreateEntity(EntityType type, int assetId)
@@ -257,6 +266,19 @@ public static class Entities
                 var asset       = ProjectileTable[assetId];
                 var prefab      = PrefabTable[asset.prefabId];
                 
+                if(asset.instanced)
+                {
+                    ref var instance  = ref InstancedPool.Add(entity);
+                    ref var transform = ref TransformPool.Add(entity);
+                    
+                    transform.position    = position;
+                    transform.orientation = orientation * Mathf.Rad2Deg;
+                    transform.scale       = scale;
+                    
+                    instance.mesh     = asset.mesh;
+                    instance.material = asset.material;
+                }
+                
                 switch(asset.type)
                 {
                     case ProjectileType.Bullet:
@@ -294,7 +316,10 @@ public static class Entities
                     break;
                 }
                 
-                CreateReference(entity, EntityType.Projectile, position, orientation, scale, prefab);
+                if(asset.instanced == false)
+                {
+                    CreateReference(entity, EntityType.Projectile, position, orientation, scale, prefab);
+                }
             }
             break;
             
@@ -356,6 +381,11 @@ public static class Entities
         {
             ref var goRef = ref GoReferencePool.Get(entity);
             goRef.go.Destroy();
+            MainWorld.DelEntity(entity);
+        }
+        
+        foreach(var entity in DestroyQuery)
+        {
             MainWorld.DelEntity(entity);
         }
     }
