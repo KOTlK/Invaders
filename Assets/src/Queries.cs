@@ -17,6 +17,7 @@ public static class Queries
     public static EcsFilter EngageQuery;
     public static EcsFilter InstancedBulletsQuery;
     public static EcsFilter InstancesToSyncQuery;
+    public static EcsFilter EnemyStateMachineQuery;
     
     public static void InitQueries()
     {
@@ -34,5 +35,6 @@ public static class Queries
         EngageQuery              = MainWorld.Filter<AiShip>().Inc<HoldDistance>().Inc<HasTarget>().Inc<Ship>().Inc<Movement>().Inc<Transform>().Inc<Engage>().Exc<Destroy>().End();
         InstancedBulletsQuery    = MainWorld.Filter<Instanced>().Inc<Bullet>().Inc<Transform>().Exc<Destroy>().End();
         InstancesToSyncQuery     = MainWorld.Filter<Instanced>().Inc<Transform>().Exc<Destroy>().End();
+        EnemyStateMachineQuery   = MainWorld.Filter<EnemyStateMachine>().Exc<Destroy>().End();
     }
 }

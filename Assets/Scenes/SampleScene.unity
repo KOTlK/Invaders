@@ -380,7 +380,7 @@ MonoBehaviour:
     mesh: 0
     material: 0
     prefabId: 1
-    damage: 25
+    damage: 2
     canDamageSender: 0
     speed: 20
     radius: 0.2

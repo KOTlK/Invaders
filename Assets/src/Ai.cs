@@ -11,9 +11,161 @@ public static class Ai
 {
     public static void UpdateAi(float dt)
     {
-        UpdatePatrol(dt);
-        UpdateFollowers(dt);
-        UpdateEngage(dt);
+        UpdateStateMachines(dt);
+        UpdatePatrolSteering(dt);
+        UpdateFollowersSteering(dt);
+        UpdateEngageSteering(dt);
+    }
+
+    private static Collider2D[] CollisionBuffer = new Collider2D[64];
+    
+    public static void UpdateStateMachines(float dt)
+    {
+        foreach(var entity in EnemyStateMachineQuery)
+        {
+            ref var stateMachine = ref StateMachinePool.Get(entity);
+            ref var ai           = ref AiPool.Get(entity);
+            
+            switch(stateMachine.currentState)
+            {
+                case EnemyState.Patrolling:
+                {
+                    ref var transform = ref TransformPool.Get(entity);
+
+                    var collCount = Physics2D.OverlapCircleNonAlloc(
+                        transform.position, 
+                        ai.searchRadius, 
+                        CollisionBuffer);
+            
+                    for(var i = 0; i < collCount; ++i)
+                    {
+                        var coll = CollisionBuffer[i];
+                        
+                        if(coll.TryGetComponent(out Entity targetEntity))
+                        {
+                            if(targetEntity.Id == entity)
+                                continue;
+                                
+                            if(targetEntity.Type == EntityType.Ship || 
+                               targetEntity.Type == EntityType.Player)
+                            {
+                                ToFollowingTarget(entity, ref ai, ref stateMachine, targetEntity.Id);
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+                
+                case EnemyState.FollowingTarget:
+                {
+                    ref var target          = ref TargetPool.Get(entity);             
+                    ref var transform       = ref TransformPool.Get(entity);
+                    ref var targetTransform = ref TransformPool.Get(target.entity);
+                    ref var follow          = ref FollowPool.Get(entity);
+                    
+                    if(DestroyPool.Has(target.entity))
+                    {
+                        ToPatrolling(entity, ref ai, ref stateMachine);
+                        break;
+                    }
+                    
+                    var directionToTarget = targetTransform.position - transform.position;
+                    var direction         = directionToTarget;
+                    var distance          = direction.magnitude;
+                    
+                    if(distance > follow.maxDistance)
+                    {
+                        ToPatrolling(entity, ref ai, ref stateMachine);
+                        break;
+                    }
+                    
+                    if(distance <= follow.distance)
+                    {
+                        ToFighting(entity, ref ai, ref stateMachine);
+                        break;
+                    }
+                }
+                break;
+                
+                case EnemyState.Fighting:
+                {
+                    ref var target          = ref TargetPool.Get(entity);
+                    ref var transform       = ref TransformPool.Get(entity);
+                    ref var targetTransform = ref TransformPool.Get(target.entity);
+                    ref var holdDistance    = ref HoldDistancePool.Get(entity);
+                    ref var ship            = ref ShipPool.Get(entity);
+                    
+                    ship.shooting = true;
+                    
+                    if(DestroyPool.Has(target.entity))
+                    {
+                        ship.shooting = false;
+                        
+                        ToPatrolling(entity, ref ai, ref stateMachine);
+                        break;
+                    }
+                    
+                    var sqrDistanceToTarget = (targetTransform.position - transform.position).sqrMagnitude;
+                    
+                    if(sqrDistanceToTarget >= holdDistance.max * holdDistance.max)
+                    {
+                        ship.shooting = false;
+                        
+                        ToFollowingTarget(entity, ref ai, ref stateMachine, target.entity);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    public static void ToPatrolling(int entity, ref AiShip ai, ref EnemyStateMachine sm)
+    {
+        ref var patrol = ref PatrolPool.Add(entity);
+                        
+        patrol.destination  = RandomPointInsideWorldBounds();
+        patrol.searchRadius = ai.searchRadius;
+        
+        DelComponentIfExist(FollowPool, entity);
+        DelComponentIfExist(TargetPool, entity);
+        DelComponentIfExist(EngagePool, entity);
+        DelComponentIfExist(HoldDistancePool, entity);
+        
+        sm.currentState = EnemyState.Patrolling;
+    }
+    
+    public static void ToFollowingTarget(int entity, ref AiShip ai, ref EnemyStateMachine sm, int targetEntity)
+    {
+        ref var target    = ref AddComponentIfNotExist(TargetPool, entity);
+        ref var follow    = ref FollowPool.Add(entity);
+        
+        target.entity          = targetEntity;
+        follow.distance        = ai.followDistance;
+        follow.maxDistance     = ai.maxFollowDistance;
+        
+        DelComponentIfExist(EngagePool, entity);
+        DelComponentIfExist(HoldDistancePool, entity);
+        DelComponentIfExist(PatrolPool, entity);
+        
+        sm.currentState = EnemyState.FollowingTarget;
+    }
+    
+    public static void ToFighting(int entity, ref AiShip ai, ref EnemyStateMachine sm)
+    {
+        ref var holdDistance = ref HoldDistancePool.Add(entity);
+        ref var engage       = ref EngagePool.Add(entity);
+        ref var ship         = ref ShipPool.Get(entity);
+        
+        holdDistance.distance = ai.holdDistance;
+        holdDistance.max      = ai.maxHoldDistance;
+        engage.weaponRange    = ship.weaponRange;
+        
+        DelComponentIfExist(FollowPool, entity);
+        DelComponentIfExist(PatrolPool, entity);
+        
+        sm.currentState = EnemyState.Fighting;
     }
 
 
@@ -23,7 +175,7 @@ public static class Ai
     private const float MinAngleDeviation = -0.5f;
     private const float MaxAngleDeviation = 1.5f;
     
-    public static void UpdateEngage(float dt)
+    public static void UpdateEngageSteering(float dt)
     {
         foreach(var entity in EngageQuery)
         {
@@ -34,16 +186,16 @@ public static class Ai
             ref var movement        = ref MovementPool.Get(entity);
             ref var ship            = ref ShipPool.Get(entity);
             ref var ai              = ref AiPool.Get(entity);
-            ref var targetTransform = ref TransformPool.Get(target.targetEntity);
+            ref var targetTransform = ref TransformPool.Get(target.entity);
             
             var targetVelocity = Vector3.zero;
             
-            if(PlayerPool.Has(target.targetEntity))
+            if(PlayerPool.Has(target.entity))
             {
-                targetVelocity = PlayerPool.Get(target.targetEntity).velocity;
+                targetVelocity = PlayerPool.Get(target.entity).velocity;
             }else
             {
-                targetVelocity = MovementPool.Get(target.targetEntity).velocity;
+                targetVelocity = MovementPool.Get(target.entity).velocity;
             }
             
             //move around target
@@ -67,63 +219,24 @@ public static class Ai
             var angularRotation = MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             
             steering.angular  = angularRotation - transform.orientation;
-            movement.steering = steering;
-            
-            //shoot at target
-            
-            ship.shooting = true;
+            movement.steering = steering;            
         }
     }
     
-    public static void UpdateFollowers(float dt)
+    public static void UpdateFollowersSteering(float dt)
     {
         foreach(var entity in FollowQuery)
         {
             ref var follow    = ref FollowPool.Get(entity);
-            ref var hasTarget = ref TargetPool.Get(entity);
-            
-            if(DestroyPool.Has(hasTarget.targetEntity))
-            {
-                FollowPool.Del(entity);
-                TargetPool.Del(entity);
-                continue;
-            }
+            ref var target    = ref TargetPool.Get(entity);
                 
             ref var ship            = ref ShipPool.Get(entity);
             ref var transform       = ref TransformPool.Get(entity);
-            ref var targetTransform = ref TransformPool.Get(hasTarget.targetEntity);
+            ref var targetTransform = ref TransformPool.Get(target.entity);
             ref var movement        = ref MovementPool.Get(entity);
             
             var directionToTarget = targetTransform.position - transform.position;
             var direction         = directionToTarget;
-            var distance          = direction.magnitude;
-            
-            if(distance > follow.maxDistance)
-            {
-                ref var patrol = ref PatrolPool.Add(entity);
-                ref var ai     = ref AiPool.Get(entity);
-                
-                patrol.destination  = RandomPointInsideWorldBounds();
-                patrol.searchRadius = ai.searchRadius;
-                
-                FollowPool.Del(entity);
-                TargetPool.Del(entity);
-                continue;
-            }
-            
-            if(distance <= follow.distance)
-            {
-                ref var holdDistance = ref HoldDistancePool.Add(entity);
-                ref var engage       = ref EngagePool.Add(entity);
-                ref var ai           = ref AiPool.Get(entity);
-                
-                holdDistance.distance = ai.holdDistance;
-                holdDistance.max      = ai.maxHoldDistance;
-                engage.weaponRange    = ship.weaponRange;
-                
-                FollowPool.Del(entity);
-                continue;
-            }
             
             var steering          = new Steering();
             
@@ -137,10 +250,10 @@ public static class Ai
             
             var angle = Mathf.Atan2(directionToTarget.y, directionToTarget.x) * Mathf.Rad2Deg;
             
-            var target = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
+            var targetAngle = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             
             steering.linear = direction * ship.acceleration - movement.velocity;
-            steering.angular = target - transform.orientation;
+            steering.angular = targetAngle - transform.orientation;
             
             movement.steering = steering;
         }
@@ -150,9 +263,7 @@ public static class Ai
     private const float SlowRadius         = 2f;
     private const float TimeToTarget       = 10f;
     
-    private static Collider2D[] CollisionBuffer = new Collider2D[64];
-    
-    public static void UpdatePatrol(float dt)
+    public static void UpdatePatrolSteering(float dt)
     {
         foreach(var entity in PatrolQuery)
         {
@@ -160,39 +271,6 @@ public static class Ai
             ref var transform = ref TransformPool.Get(entity);
             ref var patrol    = ref PatrolPool.Get(entity);
             ref var movement  = ref MovementPool.Get(entity);
-            ref var ai        = ref AiPool.Get(entity);
-            
-
-            var collCount = Physics2D.OverlapCircleNonAlloc(transform.position, ai.searchRadius, CollisionBuffer);
-            
-            var exit = false;
-            for(var i = 0; i < collCount; ++i)
-            {
-                var coll = CollisionBuffer[i];
-                
-                if(coll.TryGetComponent(out Entity targetEntity))
-                {
-                    if(targetEntity.Id == entity)
-                        continue;
-                        
-                    if(targetEntity.Type == EntityType.Ship || targetEntity.Type == EntityType.Player)
-                    {
-                        ref var hasTarget = ref TargetPool.Add(entity);
-                        ref var follow    = ref FollowPool.Add(entity);
-                        
-                        hasTarget.targetEntity = targetEntity.Id;
-                        follow.distance        = ai.followDistance;
-                        follow.maxDistance     = ai.maxFollowDistance;
-                        
-                        PatrolPool.Del(entity);
-                        exit = true;
-                        break;
-                    }
-                }
-            }
-            
-            if(exit)
-                continue;
             
             var direction   = patrol.destination - transform.position;
             var distance    = direction.magnitude;

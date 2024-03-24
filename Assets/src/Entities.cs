@@ -107,7 +107,7 @@ public struct Patrol
 
 public struct HasTarget
 {
-    public int targetEntity;
+    public int entity;
 }
 
 public struct HoldDistance
@@ -119,6 +119,18 @@ public struct HoldDistance
 public struct Engage
 {
     public float weaponRange;
+}
+
+public enum EnemyState
+{
+    Patrolling,
+    FollowingTarget,
+    Fighting
+}
+
+public struct EnemyStateMachine
+{
+    public EnemyState currentState;
 }
 
 [System.Serializable]
@@ -196,9 +208,7 @@ public static class Entities
         {
             var entity = CreateEntity(EntityType.Ship, RandomPointInsideWorldBounds(), Random.Range(0, ShipAssetTable.Length));
             
-            ref var patrol = ref PatrolPool.Add(entity);
             
-            patrol.destination = RandomPointInsideWorldBounds();
         }
     }
     
@@ -239,6 +249,9 @@ public static class Entities
                 ref var hp       = ref HealthPool.Add(entity);
                 ref var movement = ref MovementPool.Add(entity);
                 ref var ai       = ref AiPool.Add(entity);
+                ref var sm       = ref StateMachinePool.Add(entity);
+                ref var patrol   = ref PatrolPool.Add(entity);
+            
                 
                 ship.size           = asset.size;
                 ship.reloadTime     = asset.reloadTime;
@@ -256,6 +269,9 @@ public static class Entities
                 movement.steering   = new Steering{linear = Vector3.zero, angular = 0f};
                 
                 ai = asset.aiSettings.shipSettings;
+                
+                sm.currentState     = EnemyState.Patrolling;
+                patrol.destination  = RandomPointInsideWorldBounds();    
                 
                 CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
             }

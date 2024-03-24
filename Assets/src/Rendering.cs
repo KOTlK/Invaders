@@ -12,7 +12,7 @@ public static class Rendering
     {
         var instancesCount = InstancedBulletsQuery.GetEntitiesCount();
         
-        Debug.Log(instancesCount);
+        // Debug.Log(instancesCount);
         
         if(instancesCount == 0)
             return;
