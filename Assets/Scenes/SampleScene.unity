@@ -447,7 +447,7 @@ MonoBehaviour:
   Materials:
   - {fileID: 2100000, guid: f79685891f0d797498609c8c12cb7d66, type: 2}
   InstancedBulletTexture: {fileID: 2800000, guid: 3ba5d199f1b99334eafc2dfe77bd9c52, type: 3}
-  ShipsCount: 1
+  ShipsCount: 10
 --- !u!4 &1014251903
 Transform:
   m_ObjectHideFlags: 0

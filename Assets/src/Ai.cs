@@ -213,8 +213,11 @@ public static class Ai
             steering.linear = velocity - movement.velocity;
             
             //aim at target
-            //TODO: aim at future target position not in current
-            var targetDirection = targetTransform.position - transform.position;
+            var distanceToTarget = Vector3.Distance(transform.position, targetTransform.position);
+            var time             = distanceToTarget / ProjectileTable[ship.projectileId].speed;
+            var targetPosition   = targetTransform.position + targetVelocity * time;
+            var targetDirection  = targetPosition - transform.position;
+            
             angle = Atan2(targetDirection.y, targetDirection.x) * Rad2Deg;
             var angularRotation = MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             
