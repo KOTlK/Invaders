@@ -4,7 +4,8 @@ using System;
 
 public static class Vars
 {    
-    public static bool PlayerInvisible = false;
+    public static bool  PlayerInvisible = false;
+    public static float CameraSpeed;
     
     public static void ParseVars(TextAsset asset)
     {
@@ -26,6 +27,12 @@ public static class Vars
                 case nameof(PlayerInvisible):
                 {
                     PlayerInvisible = Convert.ToBoolean(Int32.Parse(words[1]));
+                }
+                break;
+                
+                case nameof(CameraSpeed):
+                {
+                    CameraSpeed = Single.Parse(words[1]);
                 }
                 break;
             }

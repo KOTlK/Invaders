@@ -459,6 +459,22 @@ public static class Entities
             ref var movement  = ref MovementPool.Get(entity);
             ref var transform = ref TransformPool.Get(entity);
             
+            var nextPosition = transform.position + movement.velocity * dt;
+            
+            var halfSize = Size * 0.5f;
+            var max      = Center + halfSize;
+            var min      = Center - halfSize;
+            
+            if(nextPosition.x < min.x || nextPosition.x > max.x)
+            {
+                movement.velocity.x = 0;
+            }
+            
+            if(nextPosition.y < min.y || nextPosition.y > max.y)
+            {
+                movement.velocity.y = 0;
+            }
+            
             transform.position    += movement.velocity * dt;
             transform.orientation += movement.steering.angular;
             
@@ -496,8 +512,26 @@ public static class Entities
             var targetOrientation = Mathf.MoveTowardsAngle(transform.orientation, angle, ship.rotationSpeed * dt);
             targetOrientation -= transform.orientation;
             
+            var nextPosition = transform.position + player.velocity * dt;
+            
+            var halfSize = Size * 0.5f;
+            var max      = Center + halfSize;
+            var min      = Center - halfSize;
+            
+            if(nextPosition.x < min.x || nextPosition.x > max.x)
+            {
+                player.velocity.x = 0;
+            }
+            
+            if(nextPosition.y < min.y || nextPosition.y > max.y)
+            {
+                player.velocity.y = 0;
+            }
+            
             transform.position    += player.velocity * dt;
             transform.orientation += targetOrientation;
+            
+            FollowCamera.FollowTarget(transform.position);
         }
     }
     

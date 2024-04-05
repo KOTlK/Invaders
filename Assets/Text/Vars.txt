@@ -1,1 +1,2 @@
 PlayerInvisible 1
+CameraSpeed 80

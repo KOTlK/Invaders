@@ -61,7 +61,6 @@ public static class Ai
                 {
                     ref var target          = ref TargetPool.Get(entity);             
                     ref var transform       = ref TransformPool.Get(entity);
-                    ref var targetTransform = ref TransformPool.Get(target.entity);
                     ref var follow          = ref FollowPool.Get(entity);
                     
                     if(DestroyPool.Has(target.entity))
@@ -69,6 +68,10 @@ public static class Ai
                         ToPatrolling(entity, ref ai, ref stateMachine);
                         break;
                     }
+                    
+                    ref var targetTransform = ref TransformPool.Get(target.entity);
+                    
+                    
                     
                     var directionToTarget = targetTransform.position - transform.position;
                     var direction         = directionToTarget;
@@ -92,11 +95,8 @@ public static class Ai
                 {
                     ref var target          = ref TargetPool.Get(entity);
                     ref var transform       = ref TransformPool.Get(entity);
-                    ref var targetTransform = ref TransformPool.Get(target.entity);
                     ref var holdDistance    = ref HoldDistancePool.Get(entity);
                     ref var ship            = ref ShipPool.Get(entity);
-                    
-                    ship.shooting = true;
                     
                     if(DestroyPool.Has(target.entity))
                     {
@@ -105,6 +105,11 @@ public static class Ai
                         ToPatrolling(entity, ref ai, ref stateMachine);
                         break;
                     }
+                    
+                    ref var targetTransform = ref TransformPool.Get(target.entity);
+                    
+                    ship.shooting = true;
+                    
                     
                     var sqrDistanceToTarget = (targetTransform.position - transform.position).sqrMagnitude;
                     

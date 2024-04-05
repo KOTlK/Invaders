@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -229,7 +230,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 15
+  orthographic size: 8
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -260,6 +261,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c49f3d8694606e846a517b64696cc52e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Camera: {fileID: 519420031}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -372,7 +386,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   VarsAsset: {fileID: 4900000, guid: 03a39f1850d56794db0d53be9cc0b1fb, type: 3}
-  WorldSize: {x: 20, y: 20, z: 0}
+  WorldSize: {x: 50, y: 50, z: 0}
   Camera: {fileID: 519420031}
   ProjectilesTable:
   - type: 0
@@ -385,6 +399,16 @@ MonoBehaviour:
     speed: 20
     radius: 0.2
     timeToLive: 10
+  - type: 0
+    instanced: 0
+    mesh: 0
+    material: 0
+    prefabId: 1
+    damage: 10
+    canDamageSender: 0
+    speed: 13
+    radius: 0.3
+    timeToLive: 15
   PrefabsTable:
   - {fileID: 6740681993998207679, guid: d0ccc8c861ee4bb4a8fc3ce613079ec9, type: 3}
   - {fileID: 4774465753761943731, guid: deae759c7739b3e41944d22b487ba655, type: 3}
@@ -433,7 +457,7 @@ MonoBehaviour:
     reloadTime: 0.7
     weaponRange: 20
     maxHp: 150
-    projectileId: 0
+    projectileId: 1
     prefabId: 3
     aiSettings:
       shipSettings:
