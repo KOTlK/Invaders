@@ -24,7 +24,6 @@ public class Startup : MonoBehaviour
     public ShipConfig[]       ShipsAssetsTable;
     public Sprite[]           Sprites;
     public Material[]         Materials;
-    public Texture            InstancedBulletTexture;
     public int                ShipsCount = 100;
     
     #if UNITY_EDITOR
@@ -45,8 +44,6 @@ public class Startup : MonoBehaviour
         
         
         Assets.MeshTable = new Mesh[Sprites.Length];
-        
-        Assets.MaterialTable[0].SetTexture("_MainTex", InstancedBulletTexture);
         
         //convert sprites to meshes
         for(var i = 0; i < Sprites.Length; ++i)
@@ -85,7 +82,6 @@ public class Startup : MonoBehaviour
         
         DestroyQueuedEntities();
 
-        
         UpdateTemp(dt);
         MoveEntities(dt);
         UpdateShips(dt);
