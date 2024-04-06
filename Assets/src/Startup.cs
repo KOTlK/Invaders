@@ -61,7 +61,7 @@ public class Startup : MonoBehaviour
             Assets.MeshTable[i] = mesh;
         }
         
-        CreatePlayer(Vector3.zero, 0);
+        CreatePlayer(Vector3.zero, 0f, Vector3.one, 0);
         CreateMultipleShipsRandomly(ShipsCount);
         
         Vars.ParseVars(VarsAsset);

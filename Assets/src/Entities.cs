@@ -157,7 +157,7 @@ public struct ShipConfig
     public float   maxSpeed;
     public float   acceleration;
     public float   damping;
-    public float   reloadTime;
+    public float   bps; //bullets per second
     public float   weaponRange;
     public int     maxHp;
     public int     projectileId;
@@ -197,173 +197,9 @@ public enum EntityType
 
 public static class Entities
 {
-    public static void CreatePlayer(Vector3 position, int assetId)
-    {
-        var entity = CreateEntity(EntityType.Player, position, assetId);        
-    }
-    
-    public static void CreateMultipleShipsRandomly(int count)
-    {
-        for(var i = 0; i < count; ++i)
-        {
-            var entity = CreateEntity(EntityType.Ship, RandomPointInsideWorldBounds(), Random.Range(0, ShipAssetTable.Length));
-            
-            
-        }
-    }
-    
-    public static void CreateProjectile(Vector3 position, Vector3 direction, float maxDistance, int owner, int assetId)
-    {        
-        var orientation = Mathf.Atan2(direction.y, direction.x);
-        var entity      = CreateEntity(EntityType.Projectile, position, orientation, Vector3.one, assetId);
-        ref var bullet  = ref BulletPool.Get(entity);
-        ref var temp    = ref TempPool.Get(entity);
-        
-        temp.timeToLive = maxDistance / bullet.speed;
-        bullet.sender   = owner;
-    }
-    
-    public static int CreateEntity(EntityType type, int assetId)
-    {
-        return CreateEntity(type, Vector3.zero, 0, Vector3.one, assetId);
-    }
-    
-    public static int CreateEntity(EntityType type, Vector3 position, int assetId)
-    {
-        return CreateEntity(type, position, 0, Vector3.one, assetId);
-    }
-    
-    //Create basic entity with transform and view
-    public static int CreateEntity(EntityType type, Vector3 position, float orientation, Vector3 scale, int assetId)
+    public static int CreateEntity()
     {
         var entity = MainWorld.NewEntity();
-        
-        switch (type)
-        {
-            case EntityType.Ship:
-            {
-                var asset  = ShipAssetTable[assetId];
-                var prefab = PrefabTable[asset.prefabId];
-                
-                ref var ship     = ref ShipPool.Add(entity);
-                ref var hp       = ref HealthPool.Add(entity);
-                ref var movement = ref MovementPool.Add(entity);
-                ref var ai       = ref AiPool.Add(entity);
-                ref var sm       = ref StateMachinePool.Add(entity);
-                ref var patrol   = ref PatrolPool.Add(entity);
-            
-                
-                ship.size           = asset.size;
-                ship.reloadTime     = asset.reloadTime;
-                ship.weaponRange    = asset.weaponRange;
-                ship.projectileId   = asset.projectileId;
-                ship.rotationSpeed  = asset.rotationSpeed;
-                ship.maxSpeed       = asset.maxSpeed;
-                ship.acceleration   = asset.acceleration;
-                ship.damping        = asset.damping;
-                
-                hp.current          = asset.maxHp;
-                hp.max              = asset.maxHp;
-                
-                movement.velocity   = Vector3.zero;
-                movement.steering   = new Steering{linear = Vector3.zero, angular = 0f};
-                
-                ai = asset.aiSettings.shipSettings;
-                
-                sm.currentState     = EnemyState.Patrolling;
-                patrol.destination  = RandomPointInsideWorldBounds();    
-                
-                CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
-            }
-            break;
-            
-            case EntityType.Projectile:
-            {
-                var asset       = ProjectileTable[assetId];
-                var prefab      = PrefabTable[asset.prefabId];
-                
-                if(asset.instanced)
-                {
-                    ref var instance  = ref InstancedPool.Add(entity);
-                    ref var transform = ref TransformPool.Add(entity);
-                    
-                    transform.position    = position;
-                    transform.orientation = orientation * Mathf.Rad2Deg;
-                    transform.scale       = scale;
-                    
-                    instance.mesh     = asset.mesh;
-                    instance.material = asset.material;
-                }
-                
-                switch(asset.type)
-                {
-                    case ProjectileType.Bullet:
-                    {
-                        ref var bullet   = ref BulletPool.Add(entity);
-                        ref var temp     = ref TempPool.Add(entity);
-                        ref var movement = ref MovementPool.Add(entity);
-                        //in this case orientation passed as radians, not degrees. otherwise there will be unnecessary translations.
-                        var direction = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
-                        
-                        direction.Normalize();
-                        
-                        bullet.speed           = asset.speed;
-                        bullet.radius          = asset.radius;
-                        bullet.damage          = asset.damage;
-                        bullet.canDamageSender = asset.canDamageSender;   
-                        
-                        temp.timePassed = 0;
-                        
-                        movement.velocity = direction * asset.speed;
-                        movement.steering.angular = 0f;
-                    }
-                    break;
-                    
-                    case ProjectileType.Rocket:
-                    {
-                        
-                    }
-                    break;
-                    
-                    case ProjectileType.Laser:
-                    {
-                        
-                    }
-                    break;
-                }
-                
-                if(asset.instanced == false)
-                {
-                    CreateReference(entity, EntityType.Projectile, position, orientation, scale, prefab);
-                }
-            }
-            break;
-            
-            case EntityType.Player:
-            {
-                var asset  = ShipAssetTable[assetId];
-                var prefab = PrefabTable[asset.prefabId];
-                
-                ref var ship     = ref ShipPool.Add(entity);
-                ref var hp       = ref HealthPool.Add(entity);
-                PlayerPool.Add(entity);
-                
-                ship.size          = asset.size;
-                ship.rotationSpeed = asset.rotationSpeed;
-                ship.weaponRange   = asset.weaponRange;
-                ship.maxSpeed      = asset.maxSpeed;
-                ship.acceleration  = asset.acceleration;
-                ship.damping       = asset.damping;
-                ship.reloadTime    = asset.reloadTime;
-                ship.projectileId  = asset.projectileId;
-                
-                hp.current = asset.maxHp;
-                hp.max     = asset.maxHp;
-                
-                CreateReference(entity, EntityType.Player, position, orientation, scale, prefab);
-            }
-            break;
-        }
         
         return entity;
     }
@@ -389,6 +225,122 @@ public static class Entities
     {
         if(DestroyPool.Has(entity) == false)
             DestroyPool.Add(entity);
+    }
+
+    public static void CreatePlayer(Vector3 position, float orientation, Vector3 scale, int assetId)
+    {
+        var entity = CreateEntity();
+        
+        var asset  = ShipAssetTable[assetId];
+        var prefab = PrefabTable[asset.prefabId];
+        
+        ref var ship     = ref ShipPool.Add(entity);
+        ref var hp       = ref HealthPool.Add(entity);
+        PlayerPool.Add(entity);
+        
+        ship.size          = asset.size;
+        ship.rotationSpeed = asset.rotationSpeed;
+        ship.weaponRange   = asset.weaponRange;
+        ship.maxSpeed      = asset.maxSpeed;
+        ship.acceleration  = asset.acceleration;
+        ship.damping       = asset.damping;
+        ship.reloadTime    = 1 / asset.bps;
+        ship.projectileId  = asset.projectileId;
+        
+        hp.current = asset.maxHp;
+        hp.max     = asset.maxHp;
+        
+        CreateReference(entity, EntityType.Player, position, orientation, scale, prefab);
+    }
+    
+    public static void CreateMultipleShipsRandomly(int count)
+    {
+        for(var i = 0; i < count; ++i)
+        {
+            var entity = CreateEntity();
+            CreateAiShip(entity, Random.Range(0, ShipAssetTable.Length), RandomPointInsideWorldBounds(),  0f, Vector3.one);
+        }
+    }
+    
+    public static int CreateAiShip(int entity, int assetId, Vector3 position, float orientation, Vector3 scale)
+    {
+        var asset  = ShipAssetTable[assetId];
+        var prefab = PrefabTable[asset.prefabId];
+        
+        ref var ship     = ref ShipPool.Add(entity);
+        ref var hp       = ref HealthPool.Add(entity);
+        ref var movement = ref MovementPool.Add(entity);
+        ref var ai       = ref AiPool.Add(entity);
+        ref var sm       = ref StateMachinePool.Add(entity);
+        ref var patrol   = ref PatrolPool.Add(entity);
+    
+        
+        ship.size           = asset.size;
+        ship.reloadTime     = 1 / asset.bps;
+        ship.weaponRange    = asset.weaponRange;
+        ship.projectileId   = asset.projectileId;
+        ship.rotationSpeed  = asset.rotationSpeed;
+        ship.maxSpeed       = asset.maxSpeed;
+        ship.acceleration   = asset.acceleration;
+        ship.damping        = asset.damping;
+        
+        hp.current          = asset.maxHp;
+        hp.max              = asset.maxHp;
+        
+        movement.velocity   = Vector3.zero;
+        movement.steering   = new Steering{linear = Vector3.zero, angular = 0f};
+        
+        ai = asset.aiSettings.shipSettings;
+        
+        sm.currentState     = EnemyState.Patrolling;
+        patrol.destination  = RandomPointInsideWorldBounds();    
+        
+        CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
+        
+        return entity;
+    }
+    
+    public static void CreateBullet(Vector3 position, Vector3 direction, float maxDistance, int owner, int assetId)
+    {        
+        var orientation = Mathf.Atan2(direction.y, direction.x);
+        var asset       = ProjectileTable[assetId];
+        var entity      = CreateEntity();
+        
+        if(asset.instanced)
+        {
+            ref var instance  = ref InstancedPool.Add(entity);
+            ref var transform = ref TransformPool.Add(entity);
+            
+            transform.position    = position;
+            transform.orientation = orientation * Mathf.Rad2Deg;
+            transform.scale       = Vector3.one;
+            
+            instance.mesh     = asset.mesh;
+            instance.material = asset.material;
+        }else
+        {
+            var prefab      = PrefabTable[asset.prefabId];
+
+            CreateReference(entity, EntityType.Projectile, position, orientation, Vector3.one, prefab);
+        }
+        
+        ref var bullet   = ref BulletPool.Add(entity);
+        ref var temp     = ref TempPool.Add(entity);
+        ref var movement = ref MovementPool.Add(entity);
+        
+        direction.Normalize();
+        
+        bullet.speed           = asset.speed;
+        bullet.radius          = asset.radius;
+        bullet.damage          = asset.damage;
+        bullet.sender          = owner;
+        bullet.canDamageSender = asset.canDamageSender;   
+        
+        temp.timePassed = 0;
+        temp.timeToLive = maxDistance / bullet.speed;
+        
+        movement.velocity = direction * asset.speed;
+        movement.steering.angular = 0f;
     }
     
     public static void DestroyQueuedEntities()
@@ -580,7 +532,28 @@ public static class Entities
             {
                 var orientation = transform.orientation * Mathf.Deg2Rad;
                 var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
-                CreateProjectile(transform.position + direction * 1f, direction, ship.weaponRange, entity, ship.projectileId);
+                var projectile  = ProjectileTable[ship.projectileId];
+                
+                switch(projectile.type)
+                {
+                    case ProjectileType.Bullet:
+                    {
+                        CreateBullet(transform.position + direction * 1f, direction, ship.weaponRange, entity, ship.projectileId);
+                    }
+                    break;
+                    
+                    case ProjectileType.Rocket:
+                    {
+                        
+                    }
+                    break;
+                    
+                    case ProjectileType.Laser:
+                    {
+                        
+                    }
+                    break;
+                }
                 ship.reloadProgress = 0f;
             }
         }

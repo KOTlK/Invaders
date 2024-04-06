@@ -420,7 +420,7 @@ MonoBehaviour:
     maxSpeed: 9
     acceleration: 7
     damping: 7
-    reloadTime: 0.01
+    bps: 100
     weaponRange: 20
     maxHp: 100
     projectileId: 0
@@ -437,7 +437,7 @@ MonoBehaviour:
     maxSpeed: 6
     acceleration: 5
     damping: 5
-    reloadTime: 0.3
+    bps: 6
     weaponRange: 20
     maxHp: 90
     projectileId: 0
@@ -454,7 +454,7 @@ MonoBehaviour:
     maxSpeed: 5
     acceleration: 4
     damping: 5
-    reloadTime: 0.7
+    bps: 1
     weaponRange: 20
     maxHp: 150
     projectileId: 1
