@@ -23,7 +23,6 @@ public static class Rendering
         var components     = new NativeArray<Instanced>(InstancedPool.GetRawDenseItems(), Allocator.TempJob);
         
         
-        
         var job = new GetInstancesJob
         {
             Entities   = entities,
@@ -36,12 +35,12 @@ public static class Rendering
         
         handle.Complete();
         
-        var mesh     = MeshTable[output[0].mesh];
-        var material = MaterialTable[output[0].material];
-        
-        var rp = new RenderParams(material);
-        
-        Graphics.RenderMeshInstanced(rp, mesh, 0, output, instancesCount);
+        for(var i = 0; i < instancesCount; ++i)
+        {
+            var rp = new RenderParams(MaterialTable[output[i].material]);
+            
+            Graphics.RenderMesh(rp, MeshTable[output[i].mesh], 0, output[i].objectToWorld);
+        }
         
         output.Dispose();
         entities.Dispose();
