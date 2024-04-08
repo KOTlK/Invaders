@@ -1,6 +1,7 @@
 using System.IO;
 using UnityEngine;
 using System;
+using System.Reflection;
 
 public static class Vars
 {    
@@ -9,9 +10,9 @@ public static class Vars
     
     public static void ParseVars(TextAsset asset)
     {
-        var text = asset.text;
-        
-        var lines = text.Split('\n');
+        var text   = asset.text;
+        var lines  = text.Split('\n');
+        var fields = typeof(Vars).GetFields();
         
         foreach(var line in lines)
         {
@@ -22,20 +23,36 @@ public static class Vars
 
             var words = line.Split(' ');
             
-            switch(words[0])
+            foreach(var field in fields)
             {
-                case nameof(PlayerInvisible):
+                if(field.Name == words[0])
                 {
-                    PlayerInvisible = Convert.ToBoolean(Int32.Parse(words[1]));
+                    SetValueByType(field, words[1]);
+                    break;
                 }
-                break;
-                
-                case nameof(CameraSpeed):
-                {
-                    CameraSpeed = Single.Parse(words[1]);
-                }
-                break;
             }
+        }
+    }
+    
+    private static void SetValueByType(FieldInfo field, string value)
+    {
+        switch(field.FieldType.ToString())
+        {
+            case "System.Boolean":
+            {
+                field.SetValue(null, Convert.ToBoolean(Int32.Parse(value)));
+            }
+            break;
+            
+            case "System.Single":
+            {
+                field.SetValue(null, Single.Parse(value));
+            }
+            break;
+            
+            default:
+                Debug.LogError($"Cannot set field with type: {field.FieldType.ToString()}");
+                break;
         }
     }
 }
