@@ -57,7 +57,37 @@ public struct Player
 
 public struct Destroy
 {
-    
+    public int framesPassed;
+}
+
+public enum ProjectileType
+{
+    Bullet,
+    Rocket,
+    Laser
+}
+
+[System.Serializable] //TODO: maybe write custom inspector for this?
+public struct UnitedProjectile
+{
+    public ProjectileType type;
+    public bool           instanced;
+    public int            mesh;
+    public int            material;
+    public int            prefabId; // prefab id in prefab table
+    public int            damage;
+    public int            health;
+    public int            explosionDamage;
+    public bool           canDamageSender;
+    public float          speed;
+    public float          angularSpeed;
+    public float          acceleration;
+    public float          radius;
+    public float          timeToLive;
+    public float          splashRadius;
+    public float          searchRadius;
+    public float          fov;
+    public float          flightDistance;
 }
 
 public struct Bullet
@@ -67,6 +97,22 @@ public struct Bullet
     public int     damage;
     public int     sender;
     public bool    canDamageSender;
+}
+
+public struct Rocket
+{
+    public float speed;
+    public float angularSpeed;
+    public float acceleration;
+    public float radius;
+    public float splashRadius;
+    public float searchRadius;
+    public float fov;
+    public float flightDistance;
+    public int   damage;
+    public int   explosionDamage;
+    public int   sender;
+    public int   target;
 }
 
 public struct Instanced
@@ -166,32 +212,12 @@ public struct ShipConfig
     public AiSettings  aiSettings;
 }
 
-public enum ProjectileType
-{
-    Bullet,
-    Rocket,
-    Laser
-}
-
-[System.Serializable]
-public struct UnitedProjectile
-{
-    public ProjectileType type;
-    public bool           instanced;
-    public int            mesh;
-    public int            material;
-    public int            prefabId; // prefab id in prefab table
-    public int            damage;
-    public bool           canDamageSender;
-    public float          speed;
-    public float          radius;
-    public float          timeToLive;
-}
-
 public enum EntityType
 {
     Ship,
-    Projectile,
+    Bullet,
+    Rocket,
+    Laser,
     Player
 }
 
@@ -213,7 +239,9 @@ public static class Entities
         transform.orientation = orientation;
         transform.scale       = scale;
         
-        var go = Object.Instantiate(prefab, position, Quaternion.AngleAxis(orientation, Vector3.forward));
+        var go = Object.Instantiate(prefab, 
+                                    position, 
+                                    Quaternion.AngleAxis(orientation, Vector3.forward));
         
         go.Id           = entity;
         go.Type         = type;
@@ -224,7 +252,10 @@ public static class Entities
     public static void DestroyEntity(int entity)
     {
         if(DestroyPool.Has(entity) == false)
-            DestroyPool.Add(entity);
+        {
+            ref var destroy = ref DestroyPool.Add(entity);
+            destroy.framesPassed = 0;
+        }
     }
 
     public static void CreatePlayer(Vector3 position, float orientation, Vector3 scale, int assetId)
@@ -321,7 +352,7 @@ public static class Entities
         {
             var prefab      = PrefabTable[asset.prefabId];
 
-            CreateReference(entity, EntityType.Projectile, position, orientation, Vector3.one, prefab);
+            CreateReference(entity, EntityType.Bullet, position, orientation, Vector3.one, prefab);
         }
         
         ref var bullet   = ref BulletPool.Add(entity);
@@ -343,18 +374,72 @@ public static class Entities
         movement.steering.angular = 0f;
     }
     
+    public static int CreateRocket(Vector3 position, Vector3 direction, int owner, int assetId)
+    {
+        var entity      = CreateEntity();
+        var asset       = ProjectileTable[assetId];
+        var prefab      = PrefabTable[asset.prefabId];
+        var orientation = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        
+        ref var rocket   = ref RocketPool.Add(entity);
+        ref var movement = ref MovementPool.Add(entity);
+        ref var health   = ref HealthPool.Add(entity);
+        
+        direction.Normalize();
+        
+        rocket.speed           = asset.speed;
+        rocket.angularSpeed    = asset.angularSpeed;
+        rocket.acceleration    = asset.acceleration;
+        rocket.radius          = asset.radius;
+        rocket.splashRadius    = asset.splashRadius;
+        rocket.searchRadius    = asset.searchRadius;
+        rocket.fov             = asset.fov;
+        rocket.flightDistance  = asset.flightDistance;
+        rocket.damage          = asset.damage;
+        rocket.explosionDamage = asset.explosionDamage;
+        rocket.sender          = owner;
+        rocket.target          = -1;
+        
+        movement.velocity = direction * (asset.speed * 0.5f);
+        movement.steering.angular = 0f;
+        
+        health.max     = asset.health;
+        health.current = asset.health;
+        
+        CreateReference(entity, EntityType.Rocket, position, orientation, Vector3.one, prefab);
+        return entity;
+    }
+    
     public static void DestroyQueuedEntities()
     {
         foreach(var entity in DestroyRefQuery)
         {
-            ref var goRef = ref GoReferencePool.Get(entity);
-            goRef.go.Destroy();
-            MainWorld.DelEntity(entity);
+            ref var destroy = ref DestroyPool.Get(entity);
+            ref var goRef   = ref GoReferencePool.Get(entity);
+            
+            if(destroy.framesPassed <= 1)
+            {
+                destroy.framesPassed++;
+                continue;
+            }else
+            {
+                goRef.go.Destroy();
+                MainWorld.DelEntity(entity);
+            }
         }
         
         foreach(var entity in DestroyQuery)
         {
-            MainWorld.DelEntity(entity);
+            ref var destroy = ref DestroyPool.Get(entity);
+            
+            if(destroy.framesPassed <= 1)
+            {
+                destroy.framesPassed++;
+                continue;
+            }else
+            {
+                MainWorld.DelEntity(entity);
+            }
         }
     }
     
@@ -538,13 +623,20 @@ public static class Entities
                 {
                     case ProjectileType.Bullet:
                     {
-                        CreateBullet(transform.position + direction * 1f, direction, ship.weaponRange, entity, ship.projectileId);
+                        CreateBullet(transform.position + direction * 1f,
+                                     direction, 
+                                     ship.weaponRange, 
+                                     entity, 
+                                     ship.projectileId);
                     }
                     break;
                     
                     case ProjectileType.Rocket:
                     {
-                        
+                        CreateRocket(transform.position + direction * 1f, 
+                                     direction, 
+                                     entity, 
+                                     ship.projectileId);
                     }
                     break;
                     
@@ -597,6 +689,219 @@ public static class Entities
                     DestroyEntity(entity);
                     return;
                 }
+            }
+        }
+    }
+    
+    private static Collider2D[] rocketsCollisionBuffer = new Collider2D[32];
+    public static void UpdateRockets(float dt)
+    {
+        foreach(var entity in RocketsQuery)
+        {
+            ref var rocket    = ref RocketPool.Get(entity);
+            ref var transform = ref TransformPool.Get(entity);
+            ref var movement  = ref MovementPool.Get(entity);
+            var orientation   = transform.orientation * Mathf.Deg2Rad;
+            
+            if(rocket.target != -1)
+            {
+                if(DestroyPool.Has(rocket.target))
+                {
+                    rocket.target = -1;
+                }
+            }
+            
+            if(InsideWorldBounds(transform.position) == false)
+            {
+                DestroyEntity(entity);
+                continue;
+            }
+            
+            //resolve collisions
+            var collCount = Physics2D.OverlapCircleNonAlloc(transform.position,
+                                                            rocket.radius,
+                                                            rocketsCollisionBuffer);
+
+            var destroyed = false;
+                                                                              
+            for(var i = 0; i < collCount; ++i)
+            {
+                var coll = rocketsCollisionBuffer[i];
+                
+                if(coll.TryGetComponent(out Entity collidedEntity))
+                {
+                    if(collidedEntity.Id == entity)
+                        continue;
+                        
+                    if(collidedEntity.Id == rocket.sender)
+                        continue;
+                        
+                    switch(collidedEntity.Type)
+                    {
+                        case EntityType.Ship:
+                        {
+                            ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
+                        }
+                        break;
+                        
+                        case EntityType.Player:
+                        {
+                            if(PlayerInvisible == false)
+                                ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
+                        }
+                        break;
+                        
+                        case EntityType.Rocket:
+                        {
+                            ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
+                        }
+                        break;
+                        
+                        default:
+                            break;
+                    }
+                    
+                    destroyed = true;
+                    break;
+                }
+            }
+            
+            //create explosion and damage nearby entities
+            if(destroyed)
+            {
+                collCount = Physics2D.OverlapCircleNonAlloc(transform.position, 
+                                                            rocket.splashRadius,
+                                                            rocketsCollisionBuffer);
+                                                            
+                for(var i = 0; i < collCount; ++i)
+                {
+                    var coll = rocketsCollisionBuffer[i];
+                    
+                    if(coll.TryGetComponent(out Entity collidedEntity))
+                    {
+                        if(collidedEntity.Id == entity)
+                            continue;
+                        
+                        if(collidedEntity.Id == rocket.sender)
+                            continue;
+                            
+                        switch(collidedEntity.Type)
+                        {
+                            case EntityType.Ship:
+                            {
+                                ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                            }
+                            break;
+                            
+                            case EntityType.Player:
+                            {
+                                if(PlayerInvisible == false)
+                                    ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                            }
+                            break;
+                            
+                            case EntityType.Rocket:
+                                ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                            break;
+                            
+                            default:
+                                break;
+                        }
+                    }
+                }
+                
+                DestroyEntity(entity);
+                continue;
+            }
+            
+            //search for target
+            if(rocket.target == -1)
+            {
+                collCount = Physics2D.OverlapCircleNonAlloc(
+                                        transform.position,
+                                        rocket.searchRadius, 
+                                        rocketsCollisionBuffer);
+            
+                var closestDistance   = 10000f;
+                var closestDifference = 10000f;
+                var closestEntity     = -1;
+                var closestDirection  = Vector3.zero;
+                var lookDirection     = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
+                lookDirection.Normalize();
+
+                
+                for(var i = 0; i < collCount; ++i)
+                {
+                    var coll = rocketsCollisionBuffer[i];
+                    
+                    if(coll.TryGetComponent(out Entity collidedEntity))
+                    {
+                        if(collidedEntity.Id == entity)
+                            continue;
+                            
+                        if(collidedEntity.Type == EntityType.Ship || 
+                           collidedEntity.Type == EntityType.Player)
+                        {
+                            ref var targetTransform = ref TransformPool.Get(collidedEntity.Id);
+                            var directionToTarget   = targetTransform.position - transform.position;
+                            directionToTarget.Normalize();
+                            var distance            = Vector3.Dot(directionToTarget, lookDirection);
+                            var difference          = 1 - distance;
+                            
+                            if(difference < closestDifference)
+                            {
+                                closestDistance   = distance;
+                                closestDifference = difference;
+                                closestEntity     = collidedEntity.Id;
+                                closestDirection  = directionToTarget;
+                            }
+                        }
+                    }
+                }
+                
+                if(closestEntity > -1)
+                {
+                    var fov = Mathf.Acos(closestDistance) * Mathf.Rad2Deg;
+                    
+                    if(fov <= rocket.fov)
+                    {
+                        rocket.target = closestEntity;
+                    }
+                }
+            }
+            
+            //rotate
+            var steering = new Steering();
+
+            if(rocket.target == -1)
+            {
+                steering.angular = 0f;
+            }else
+            {
+                ref var targetTransform = ref TransformPool.Get(rocket.target);
+                var directionToTarget   = targetTransform.position - transform.position;
+                var targetOrientation   = Mathf.Atan2(directionToTarget.y, directionToTarget.x) * Mathf.Rad2Deg;
+                var angularRotation = Mathf.MoveTowardsAngle(transform.orientation, 
+                                                             targetOrientation, 
+                                                             rocket.angularSpeed * dt);
+
+                steering.angular = angularRotation - transform.orientation;
+            }
+            
+            
+            //move
+            var direction = new Vector3(Mathf.Cos(orientation), 
+                                        Mathf.Sin(orientation));
+            
+            steering.linear = direction.normalized * rocket.acceleration;
+            
+            movement.steering = steering;
+            
+            rocket.flightDistance -= movement.velocity.magnitude * dt;
+            
+            if(rocket.flightDistance <= 0)
+            {
+                DestroyEntity(entity);
             }
         }
     }

@@ -79,14 +79,14 @@ public class Startup : MonoBehaviour
 
         UpdateAi(dt);
         UpdatePlayer(dt);
-        
-        DestroyQueuedEntities();
-
         UpdateTemp(dt);
-        MoveEntities(dt);
         UpdateShips(dt);
         UpdateBullets();
+        UpdateRockets(dt);
+        MoveEntities(dt);
         UpdateHealth();
+        
+        DestroyQueuedEntities();
         
         SyncReferences();
         CreateObjectToWorld();

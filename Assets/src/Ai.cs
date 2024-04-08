@@ -7,6 +7,7 @@ using static Vars;
 using static Assets;
 using static UnityEngine.Mathf;
 
+
 public static class Ai
 {
     public static void UpdateAi(float dt)
@@ -70,12 +71,9 @@ public static class Ai
                     }
                     
                     ref var targetTransform = ref TransformPool.Get(target.entity);
-                    
-                    
-                    
-                    var directionToTarget = targetTransform.position - transform.position;
-                    var direction         = directionToTarget;
-                    var distance          = direction.magnitude;
+                    var directionToTarget   = targetTransform.position - transform.position;
+                    var direction           = directionToTarget;
+                    var distance            = direction.magnitude;
                     
                     if(distance > follow.maxDistance)
                     {

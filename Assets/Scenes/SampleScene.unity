@@ -395,35 +395,70 @@ MonoBehaviour:
     material: 0
     prefabId: 1
     damage: 2
+    health: 0
+    explosionDamage: 0
     canDamageSender: 0
     speed: 20
+    angularSpeed: 0
+    acceleration: 0
     radius: 0.2
     timeToLive: 10
+    splashRadius: 0
+    searchRadius: 0
+    fov: 0
+    flightDistance: 0
   - type: 0
     instanced: 1
     mesh: 2
     material: 2
     prefabId: 1
     damage: 10
+    health: 0
+    explosionDamage: 0
     canDamageSender: 0
     speed: 13
+    angularSpeed: 0
+    acceleration: 0
     radius: 0.3
     timeToLive: 15
+    splashRadius: 0
+    searchRadius: 0
+    fov: 0
+    flightDistance: 0
+  - type: 1
+    instanced: 0
+    mesh: 0
+    material: 0
+    prefabId: 4
+    damage: 20
+    health: 10
+    explosionDamage: 10
+    canDamageSender: 0
+    speed: 13
+    angularSpeed: 180
+    acceleration: 12
+    radius: 0.3
+    timeToLive: 15
+    splashRadius: 1
+    searchRadius: 5
+    fov: 20
+    flightDistance: 100
   PrefabsTable:
   - {fileID: 6740681993998207679, guid: d0ccc8c861ee4bb4a8fc3ce613079ec9, type: 3}
   - {fileID: 4774465753761943731, guid: deae759c7739b3e41944d22b487ba655, type: 3}
   - {fileID: 3895877397806217782, guid: bd7047e6e045edf4bbe3c099958512c1, type: 3}
   - {fileID: 3270306273001704485, guid: 4ad59e23b1750ff44b7cc57b3d9f037f, type: 3}
+  - {fileID: 6316626191963090503, guid: 4479f7960633b1d4a96db71214782a44, type: 3}
   ShipsAssetsTable:
   - size: {x: 1.42, y: 1.92}
     rotationSpeed: 180
     maxSpeed: 9
     acceleration: 7
     damping: 7
-    bps: 100
+    bps: 0.5
     weaponRange: 20
     maxHp: 100
-    projectileId: 0
+    projectileId: 2
     prefabId: 0
     aiSettings:
       shipSettings:
