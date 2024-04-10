@@ -23,6 +23,7 @@ public static class Pools
     public static EcsPool<Instanced>           InstancedPool;
     public static EcsPool<EnemyStateMachine>   StateMachinePool;
     public static EcsPool<Rocket>              RocketPool;
+    public static EcsPool<Weapon>              WeaponPool;
     
         
     public static void InitPools()
@@ -46,6 +47,7 @@ public static class Pools
         InstancedPool     = MainWorld.GetPool<Instanced>();
         StateMachinePool  = MainWorld.GetPool<EnemyStateMachine>();
         RocketPool        = MainWorld.GetPool<Rocket>();
+        WeaponPool        = MainWorld.GetPool<Weapon>();
     }
     
     

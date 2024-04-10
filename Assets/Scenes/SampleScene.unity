@@ -408,6 +408,9 @@ MonoBehaviour:
     searchRadius: 0
     fov: 0
     flightDistance: 0
+    maxLength: 0
+    thickness: 0
+    attackDelay: 0
   - type: 0
     instanced: 1
     mesh: 2
@@ -427,6 +430,9 @@ MonoBehaviour:
     searchRadius: 0
     fov: 0
     flightDistance: 0
+    maxLength: 0
+    thickness: 0
+    attackDelay: 0
   - type: 1
     instanced: 0
     mesh: 0
@@ -446,6 +452,34 @@ MonoBehaviour:
     searchRadius: 5
     fov: 40
     flightDistance: 100
+    maxLength: 0
+    thickness: 0
+    attackDelay: 0
+  WeaponsTable:
+  - type: 0
+    range: 30
+    bps: 150
+    reloadTime: 0
+    reloadProgress: 0
+    projectileId: 0
+    owner: 0
+    shooting: 0
+  - type: 1
+    range: 0
+    bps: 1
+    reloadTime: 0
+    reloadProgress: 0
+    projectileId: 2
+    owner: 0
+    shooting: 0
+  - type: 0
+    range: 30
+    bps: 2
+    reloadTime: 0
+    reloadProgress: 0
+    projectileId: 1
+    owner: 0
+    shooting: 0
   PrefabsTable:
   - {fileID: 6740681993998207679, guid: d0ccc8c861ee4bb4a8fc3ce613079ec9, type: 3}
   - {fileID: 4774465753761943731, guid: deae759c7739b3e41944d22b487ba655, type: 3}
@@ -458,11 +492,9 @@ MonoBehaviour:
     maxSpeed: 9
     acceleration: 7
     damping: 7
-    bps: 0.5
-    weaponRange: 20
     maxHp: 100
-    projectileId: 2
     prefabId: 0
+    weaponId: 1
     aiSettings:
       shipSettings:
         followDistance: 12
@@ -475,11 +507,9 @@ MonoBehaviour:
     maxSpeed: 6
     acceleration: 5
     damping: 5
-    bps: 6
-    weaponRange: 20
     maxHp: 90
-    projectileId: 0
     prefabId: 2
+    weaponId: 0
     aiSettings:
       shipSettings:
         followDistance: 12
@@ -492,11 +522,9 @@ MonoBehaviour:
     maxSpeed: 5
     acceleration: 4
     damping: 5
-    bps: 1
-    weaponRange: 20
     maxHp: 150
-    projectileId: 1
     prefabId: 3
+    weaponId: 2
     aiSettings:
       shipSettings:
         followDistance: 12

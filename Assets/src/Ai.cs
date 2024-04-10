@@ -95,10 +95,11 @@ public static class Ai
                     ref var transform       = ref TransformPool.Get(entity);
                     ref var holdDistance    = ref HoldDistancePool.Get(entity);
                     ref var ship            = ref ShipPool.Get(entity);
+                    ref var weapon          = ref WeaponPool.Get(ship.weapon);
                     
                     if(DestroyPool.Has(target.entity))
                     {
-                        ship.shooting = false;
+                        weapon.shooting = false;
                         
                         ToPatrolling(entity, ref ai, ref stateMachine);
                         break;
@@ -106,14 +107,14 @@ public static class Ai
                     
                     ref var targetTransform = ref TransformPool.Get(target.entity);
                     
-                    ship.shooting = true;
+                    weapon.shooting = true;
                     
                     
                     var sqrDistanceToTarget = (targetTransform.position - transform.position).sqrMagnitude;
                     
                     if(sqrDistanceToTarget >= holdDistance.max * holdDistance.max)
                     {
-                        ship.shooting = false;
+                        weapon.shooting = false;
                         
                         ToFollowingTarget(entity, ref ai, ref stateMachine, target.entity);
                         break;
@@ -160,10 +161,11 @@ public static class Ai
         ref var holdDistance = ref HoldDistancePool.Add(entity);
         ref var engage       = ref EngagePool.Add(entity);
         ref var ship         = ref ShipPool.Get(entity);
+        ref var weapon       = ref WeaponPool.Get(ship.weapon);
         
         holdDistance.distance = ai.holdDistance;
         holdDistance.max      = ai.maxHoldDistance;
-        engage.weaponRange    = ship.weaponRange;
+        engage.weaponRange    = weapon.range;
         
         DelComponentIfExist(FollowPool, entity);
         DelComponentIfExist(PatrolPool, entity);
@@ -189,6 +191,7 @@ public static class Ai
             ref var movement        = ref MovementPool.Get(entity);
             ref var ship            = ref ShipPool.Get(entity);
             ref var ai              = ref AiPool.Get(entity);
+            ref var weapon          = ref WeaponPool.Get(ship.weapon);
             ref var targetTransform = ref TransformPool.Get(target.entity);
             
             var targetVelocity = Vector3.zero;
@@ -217,7 +220,7 @@ public static class Ai
             
             //aim at target
             var distanceToTarget = Vector3.Distance(transform.position, targetTransform.position);
-            var time             = distanceToTarget / ProjectileTable[ship.projectileId].speed;
+            var time             = distanceToTarget / ProjectileTable[weapon.projectileId].speed;
             var targetPosition   = targetTransform.position + targetVelocity * time;
             var targetDirection  = targetPosition - transform.position;
             

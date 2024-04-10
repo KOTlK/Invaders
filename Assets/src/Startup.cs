@@ -20,6 +20,7 @@ public class Startup : MonoBehaviour
     public Vector3            WorldSize = new Vector3(100, 100, 0);
     public Camera             Camera;
     public UnitedProjectile[] ProjectilesTable;
+    public Weapon[]           WeaponsTable;
     public Entity[]           PrefabsTable;
     public ShipConfig[]       ShipsAssetsTable;
     public Sprite[]           Sprites;
@@ -39,6 +40,7 @@ public class Startup : MonoBehaviour
         Assets.PrefabTable     = PrefabsTable;
         Assets.ShipAssetTable  = ShipsAssetsTable;
         Assets.ProjectileTable = ProjectilesTable;
+        Assets.WeaponTable     = WeaponsTable;
         Assets.MaterialTable   = Materials;
         World.Size             = WorldSize;
         

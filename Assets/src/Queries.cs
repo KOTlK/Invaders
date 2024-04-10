@@ -19,6 +19,7 @@ public static class Queries
     public static EcsFilter InstancesToSyncQuery;
     public static EcsFilter EnemyStateMachineQuery;
     public static EcsFilter RocketsQuery;
+    public static EcsFilter WeaponsQuery;
     
     public static void InitQueries()
     {
@@ -38,5 +39,6 @@ public static class Queries
         InstancesToSyncQuery     = MainWorld.Filter<Instanced>().Inc<Transform>().Exc<Destroy>().End();
         EnemyStateMachineQuery   = MainWorld.Filter<EnemyStateMachine>().Exc<Destroy>().End();
         RocketsQuery             = MainWorld.Filter<Rocket>().Inc<Movement>().Inc<Transform>().Exc<Destroy>().End();
+        WeaponsQuery             = MainWorld.Filter<Weapon>().Exc<Destroy>().End();
     }
 }
