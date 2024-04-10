@@ -400,7 +400,8 @@ MonoBehaviour:
     canDamageSender: 0
     speed: 20
     angularSpeed: 0
-    acceleration: 0
+    accelerationNoTarget: 0
+    accelerationWithTarget: 0
     radius: 0.2
     timeToLive: 10
     splashRadius: 0
@@ -418,7 +419,8 @@ MonoBehaviour:
     canDamageSender: 0
     speed: 13
     angularSpeed: 0
-    acceleration: 0
+    accelerationNoTarget: 0
+    accelerationWithTarget: 0
     radius: 0.3
     timeToLive: 15
     splashRadius: 0
@@ -436,12 +438,13 @@ MonoBehaviour:
     canDamageSender: 0
     speed: 13
     angularSpeed: 180
-    acceleration: 12
+    accelerationNoTarget: 10
+    accelerationWithTarget: 22
     radius: 0.3
     timeToLive: 15
     splashRadius: 1
     searchRadius: 5
-    fov: 20
+    fov: 40
     flightDistance: 100
   PrefabsTable:
   - {fileID: 6740681993998207679, guid: d0ccc8c861ee4bb4a8fc3ce613079ec9, type: 3}

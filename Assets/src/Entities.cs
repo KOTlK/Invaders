@@ -81,7 +81,8 @@ public struct UnitedProjectile
     public bool           canDamageSender;
     public float          speed;
     public float          angularSpeed;
-    public float          acceleration;
+    public float          accelerationNoTarget;
+    public float          accelerationWithTarget;
     public float          radius;
     public float          timeToLive;
     public float          splashRadius;
@@ -103,7 +104,8 @@ public struct Rocket
 {
     public float speed;
     public float angularSpeed;
-    public float acceleration;
+    public float accelerationNoTarget;
+    public float accelerationWithTarget;
     public float radius;
     public float splashRadius;
     public float searchRadius;
@@ -269,14 +271,15 @@ public static class Entities
         ref var hp       = ref HealthPool.Add(entity);
         PlayerPool.Add(entity);
         
-        ship.size          = asset.size;
-        ship.rotationSpeed = asset.rotationSpeed;
-        ship.weaponRange   = asset.weaponRange;
-        ship.maxSpeed      = asset.maxSpeed;
-        ship.acceleration  = asset.acceleration;
-        ship.damping       = asset.damping;
-        ship.reloadTime    = 1 / asset.bps;
-        ship.projectileId  = asset.projectileId;
+        ship.size           = asset.size;
+        ship.rotationSpeed  = asset.rotationSpeed;
+        ship.weaponRange    = asset.weaponRange;
+        ship.maxSpeed       = asset.maxSpeed;
+        ship.acceleration   = asset.acceleration;
+        ship.damping        = asset.damping;
+        ship.reloadTime     = 1 / asset.bps;
+        ship.reloadProgress = ship.reloadTime;
+        ship.projectileId   = asset.projectileId;
         
         hp.current = asset.maxHp;
         hp.max     = asset.maxHp;
@@ -308,6 +311,7 @@ public static class Entities
         
         ship.size           = asset.size;
         ship.reloadTime     = 1 / asset.bps;
+        ship.reloadProgress = ship.reloadTime;
         ship.weaponRange    = asset.weaponRange;
         ship.projectileId   = asset.projectileId;
         ship.rotationSpeed  = asset.rotationSpeed;
@@ -387,20 +391,21 @@ public static class Entities
         
         direction.Normalize();
         
-        rocket.speed           = asset.speed;
-        rocket.angularSpeed    = asset.angularSpeed;
-        rocket.acceleration    = asset.acceleration;
-        rocket.radius          = asset.radius;
-        rocket.splashRadius    = asset.splashRadius;
-        rocket.searchRadius    = asset.searchRadius;
-        rocket.fov             = asset.fov;
-        rocket.flightDistance  = asset.flightDistance;
-        rocket.damage          = asset.damage;
-        rocket.explosionDamage = asset.explosionDamage;
-        rocket.sender          = owner;
-        rocket.target          = -1;
+        rocket.speed                     = asset.speed;
+        rocket.angularSpeed              = asset.angularSpeed;
+        rocket.accelerationNoTarget      = asset.accelerationNoTarget;
+        rocket.accelerationWithTarget    = asset.accelerationWithTarget;
+        rocket.radius                    = asset.radius;
+        rocket.splashRadius              = asset.splashRadius;
+        rocket.searchRadius              = asset.searchRadius;
+        rocket.fov                       = asset.fov;
+        rocket.flightDistance            = asset.flightDistance;
+        rocket.damage                    = asset.damage;
+        rocket.explosionDamage           = asset.explosionDamage;
+        rocket.sender                    = owner;
+        rocket.target                    = -1;
         
-        movement.velocity = direction * (asset.speed * 0.5f);
+        movement.velocity         = direction * (asset.speed * 0.7f);
         movement.steering.angular = 0f;
         
         health.max     = asset.health;
@@ -417,7 +422,7 @@ public static class Entities
             ref var destroy = ref DestroyPool.Get(entity);
             ref var goRef   = ref GoReferencePool.Get(entity);
             
-            if(destroy.framesPassed <= 1)
+            if(destroy.framesPassed <= 2)
             {
                 destroy.framesPassed++;
                 continue;
@@ -432,7 +437,7 @@ public static class Entities
         {
             ref var destroy = ref DestroyPool.Get(entity);
             
-            if(destroy.framesPassed <= 1)
+            if(destroy.framesPassed <= 2)
             {
                 destroy.framesPassed++;
                 continue;
@@ -705,7 +710,14 @@ public static class Entities
             
             if(rocket.target != -1)
             {
-                if(DestroyPool.Has(rocket.target))
+                //madness bcs there is no way to check if entity is alive in leoecs
+                try
+                {
+                    if(DestroyPool.Has(rocket.target))
+                    {
+                        rocket.target = -1;
+                    }
+                }catch
                 {
                     rocket.target = -1;
                 }
@@ -893,7 +905,13 @@ public static class Entities
             var direction = new Vector3(Mathf.Cos(orientation), 
                                         Mathf.Sin(orientation));
             
-            steering.linear = direction.normalized * rocket.acceleration;
+            if(rocket.target == -1)
+            {
+                steering.linear = (direction.normalized * rocket.accelerationNoTarget) - movement.velocity;
+            }else
+            {
+                steering.linear = (direction.normalized * rocket.accelerationWithTarget) - movement.velocity;
+            }
             
             movement.steering = steering;
             
