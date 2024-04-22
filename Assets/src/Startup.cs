@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using System;
 using System.Linq;
 using Leopotam.EcsLite;
@@ -43,7 +44,6 @@ public class Startup : MonoBehaviour
         Assets.WeaponTable     = WeaponsTable;
         Assets.MaterialTable   = Materials;
         World.Size             = WorldSize;
-        
         
         Assets.MeshTable = new Mesh[Sprites.Length];
         
@@ -93,6 +93,8 @@ public class Startup : MonoBehaviour
         SyncReferences();
         CreateObjectToWorld();
         DrawBullets();
+        DrawLasers();
+        FlushLasers();
         
            
         #if UNITY_EDITOR

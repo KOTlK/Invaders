@@ -2,17 +2,21 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Burst;
+using System;
 using static Queries;
 using static Pools;
 using static Assets;
 
 public static class Rendering
 {
+    private static Laser[] laserQueue = new Laser[128];
+    private static int     laserCount;
+    
+    private static Mesh[] meshPool = new Mesh[32];
+    
     public static void DrawBullets()
     {
         var instancesCount = InstancedBulletsQuery.GetEntitiesCount();
-        
-        // Debug.Log(instancesCount);
         
         if(instancesCount == 0)
             return;
@@ -48,6 +52,83 @@ public static class Rendering
         components.Dispose();
     }
     
+    public static void DrawLaser(Laser laser)
+    {
+        laserQueue[laserCount++] = laser;
+        
+        if(laserCount >= laserQueue.Length){
+            Array.Resize(ref laserQueue, laserCount << 1);
+        }
+    }
+    
+    public static void DrawLasers()
+    {
+        Debug.Log($"Drawing {laserCount} lasers");
+        for(var i = 0; i < laserCount; ++i){
+            var material      = MaterialTable[laserQueue[i].materialIndex];
+            var mesh          = GetMesh(i);
+            var direction     = laserQueue[i].end - laserQueue[i].start;
+            var length        = Vector3.Distance(laserQueue[i].end, laserQueue[i].start);
+            var halfLength    = length * 0.5f;
+            var halfThick     = laserQueue[i].thickness * 0.5f;
+            var rightTop      = new Vector3(halfLength, halfThick, 0);
+            var rightBottom   = new Vector3(halfLength, -halfThick, 0);
+            var leftBottom    = new Vector3(-halfLength, -halfThick, 0);
+            var leftTop       = new Vector3(-halfLength, halfThick, 0);
+            var angle         = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            var objectToWorld = Matrix4x4.TRS(laserQueue[i].start + direction * 0.5f, 
+                                              Quaternion.AngleAxis(angle, Vector3.forward), 
+                                              Vector3.one);
+                                              
+            Debug.Log($"Length: {length}, Start: {laserQueue[i].start}, End: {laserQueue[i].end}");
+            mesh.SetVertices(new Vector3[]{
+                leftTop,
+                rightTop,
+                rightBottom,
+                leftBottom
+            });
+            mesh.SetTriangles(new int[]{
+                0,
+                1,
+                2,
+                0,
+                2,
+                3
+            }, 0);
+            mesh.SetUVs(0, new Vector2[]{
+                new Vector2(0, 1),
+                new Vector2(1, 1),
+                new Vector2(1, 0),
+                new Vector2(0, 0)
+            });
+            mesh.SetNormals(new Vector3[]{
+                Vector3.back,
+                Vector3.back,
+                Vector3.back,
+                Vector3.back
+            });
+            
+            
+            var rp = new RenderParams(material);
+            Graphics.RenderMesh(rp, mesh, 0, objectToWorld);
+        }
+    }
+    
+    public static void FlushLasers(){
+        laserCount = 0;
+    }
+    
+    private static Mesh GetMesh(int index){
+        if(index >= meshPool.Length){
+            Array.Resize(ref meshPool, index << 1);
+        }
+        
+        if(meshPool[index] == null){
+            meshPool[index] = new Mesh();
+        }
+        
+        return meshPool[index];
+    }
 }
 
 [BurstCompile]

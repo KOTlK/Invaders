@@ -6,6 +6,7 @@ using UnityEngine;
 using static Globals;
 using static World;
 using static Vars;
+using static Rendering;
 
 public struct Transform
 {
@@ -74,8 +75,11 @@ public struct Weapon
     public float      bps;
     public float      reloadTime;
     public float      reloadProgress;
+    public float      laserThickness;
     public int        projectileId;
     public int        owner;
+    public int        materialIndex;
+    public int        laserDamage;
     public bool       shooting;
 }
 
@@ -148,6 +152,14 @@ public struct Rocket
     public int   explosionDamage;
     public int   sender;
     public int   target;
+}
+
+public struct Laser
+{
+    public Vector3 start;
+    public Vector3 end;
+    public int     materialIndex;
+    public float   thickness;
 }
 
 public struct Instanced
@@ -229,8 +241,6 @@ public struct AiSettings
 {
     public AiShip shipSettings;
 }
-
-
 
 public enum EntityType
 {
@@ -672,7 +682,61 @@ public static class Entities
             weapon.reloadProgress += dt;
             
             //shoot if can            
-            if(weapon.shooting && weapon.reloadProgress >= weapon.reloadTime)
+            if(weapon.shooting && weapon.type == WeaponType.Laser) //if laser
+            {
+                var orientation = transform.orientation * Mathf.Deg2Rad;
+                var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
+                var hit         = Physics2D.Raycast(transform.position + direction * 2f, 
+                                                    direction, 
+                                                    weapon.range);
+                
+                if(hit.collider == null)
+                {
+                    DrawLaser(new Laser{
+                                start         = transform.position, 
+                                end           = transform.position + direction * weapon.range, 
+                                materialIndex = weapon.materialIndex,
+                                thickness     = weapon.laserThickness
+                                });
+                }else
+                {
+                    DrawLaser(new Laser{
+                                start         = transform.position, 
+                                end           = hit.point, 
+                                materialIndex = weapon.materialIndex,
+                                thickness     = weapon.laserThickness
+                                });
+                }
+                
+                if(weapon.reloadProgress >= weapon.reloadTime)
+                {
+                    if(hit.collider != null)
+                    {
+                        if(hit.collider.TryGetComponent(out Entity hitEntity))
+                        {
+                            if(hitEntity.Id != weapon.owner)
+                            {
+                                switch(hitEntity.Type)
+                                {
+                                    case EntityType.Player:
+                                    {
+                                        if(PlayerInvisible == false)
+                                            ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
+                                    }
+                                    break;
+                                    
+                                    case EntityType.Ship:
+                                    {
+                                        ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    weapon.reloadProgress = 0f;
+                }
+            }else if(weapon.shooting && weapon.reloadProgress >= weapon.reloadTime)
             {
                 var orientation = transform.orientation * Mathf.Deg2Rad;
                 var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
