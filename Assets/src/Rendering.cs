@@ -52,9 +52,13 @@ public static class Rendering
         components.Dispose();
     }
     
-    public static void DrawLaser(Laser laser)
+    public static void DrawLaser(Vector3 start, Vector3 end, int materialIndex, float thickness)
     {
-        laserQueue[laserCount++] = laser;
+        laserCount++;
+        laserQueue[laserCount].start         = start;
+        laserQueue[laserCount].end           = end;
+        laserQueue[laserCount].materialIndex = materialIndex;
+        laserQueue[laserCount].thickness     = thickness;
         
         if(laserCount >= laserQueue.Length){
             Array.Resize(ref laserQueue, laserCount << 1);
@@ -63,7 +67,6 @@ public static class Rendering
     
     public static void DrawLasers()
     {
-        Debug.Log($"Drawing {laserCount} lasers");
         for(var i = 0; i < laserCount; ++i){
             var material      = MaterialTable[laserQueue[i].materialIndex];
             var mesh          = GetMesh(i);
@@ -80,7 +83,6 @@ public static class Rendering
                                               Quaternion.AngleAxis(angle, Vector3.forward), 
                                               Vector3.one);
                                               
-            Debug.Log($"Length: {length}, Start: {laserQueue[i].start}, End: {laserQueue[i].end}");
             mesh.SetVertices(new Vector3[]{
                 leftTop,
                 rightTop,

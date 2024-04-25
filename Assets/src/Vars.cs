@@ -7,6 +7,7 @@ public static class Vars
 {    
     public static bool  PlayerInvisible = false;
     public static float CameraSpeed;
+    public static int   PlayerShip;
     
     public static void ParseVars(TextAsset asset)
     {
@@ -47,6 +48,12 @@ public static class Vars
             case "System.Single":
             {
                 field.SetValue(null, Single.Parse(value));
+            }
+            break;
+            
+            case "System.Int32":
+            {
+                field.SetValue(null, Int32.Parse(value));
             }
             break;
             

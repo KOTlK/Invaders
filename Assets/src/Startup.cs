@@ -21,7 +21,6 @@ public class Startup : MonoBehaviour
     public Vector3            WorldSize = new Vector3(100, 100, 0);
     public Camera             Camera;
     public UnitedProjectile[] ProjectilesTable;
-    public Weapon[]           WeaponsTable;
     public Entity[]           PrefabsTable;
     public ShipConfig[]       ShipsAssetsTable;
     public Sprite[]           Sprites;
@@ -34,6 +33,7 @@ public class Startup : MonoBehaviour
     
     private void Start()
     {
+        Vars.ParseVars(VarsAsset);
         MainWorld = new EcsWorld();
         MainCamera = Camera;
         Pools.InitPools();
@@ -41,7 +41,6 @@ public class Startup : MonoBehaviour
         Assets.PrefabTable     = PrefabsTable;
         Assets.ShipAssetTable  = ShipsAssetsTable;
         Assets.ProjectileTable = ProjectilesTable;
-        Assets.WeaponTable     = WeaponsTable;
         Assets.MaterialTable   = Materials;
         World.Size             = WorldSize;
         
@@ -60,10 +59,9 @@ public class Startup : MonoBehaviour
             Assets.MeshTable[i] = mesh;
         }
         
-        CreatePlayer(Vector3.zero, 0f, Vector3.one, 0);
+        CreatePlayer(Vector3.zero, 0f, Vector3.one, Vars.PlayerShip);
         CreateMultipleShipsRandomly(ShipsCount);
         
-        Vars.ParseVars(VarsAsset);
         
         #if UNITY_EDITOR
         _debugSystems = new EcsSystems(MainWorld);
@@ -83,8 +81,9 @@ public class Startup : MonoBehaviour
         UpdatePlayer(dt);
         UpdateTemp(dt);
         UpdateShips(dt);
+        UpdateWeapons(dt);
         UpdateBullets();
-        UpdateRockets(dt);
+        UpdateMissiles(dt);
         MoveEntities(dt);
         UpdateHealth();
         

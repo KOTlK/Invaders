@@ -15,9 +15,9 @@ public class Entity : MonoBehaviour
     #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        if(Type == EntityType.Rocket)
+        if(Type == EntityType.Missile)
         {
-            ref var rocket     = ref RocketPool.Get(Id);
+            ref var rocket     = ref MissilePool.Get(Id);
             ref var eTransform = ref TransformPool.Get(Id);
             
             var length      = rocket.searchRadius;

@@ -18,7 +18,6 @@ public static class GameInput
             ref var transform = ref TransformPool.Get(entity);
             ref var ship      = ref ShipPool.Get(entity);
             ref var player    = ref PlayerPool.Get(entity);
-            ref var weapon    = ref WeaponPool.Get(ship.weapon);
             
             var direction = mousePosition - transform.position;
         
@@ -29,7 +28,12 @@ public static class GameInput
             
             player.moveDirection = new Vector3(horizontal, vertical);
             player.lookDirection = direction;
-            weapon.shooting      = shooting;
+            
+            for(var i = 0; i < ship.weapons.Length; ++i)
+            {
+                ref var weapon  = ref WeaponPool.Get(ship.weapons[i]);
+                weapon.shooting = shooting;
+            }
         }
     }
 }

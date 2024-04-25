@@ -37,25 +37,24 @@ public struct Steering
 
 public struct Ship
 {
-    public Vector2 size;
-    public float   rotationSpeed;
-    public float   maxSpeed;
-    public float   acceleration;
-    public float   damping;
-    public int     weapon; //weaponEntity;
+    public Collider2D collider;
+    public float      rotationSpeed;
+    public float      maxSpeed;
+    public float      acceleration;
+    public float      damping;
+    public int[]      weapons; //weaponEntities;
 }
 
 [System.Serializable]
 public struct ShipConfig
 {
-    public Vector2 size;
-    public float   rotationSpeed;
-    public float   maxSpeed;
-    public float   acceleration;
-    public float   damping;
-    public int     maxHp;
-    public int     prefabId;
-    public int     weaponId;
+    public Entity    prefab;
+    public Weapon[]  weapons;
+    public float     rotationSpeed;
+    public float     maxSpeed;
+    public float     acceleration;
+    public float     damping;
+    public int       maxHp;
     
     public AiSettings  aiSettings;
 }
@@ -71,6 +70,7 @@ public enum WeaponType
 public struct Weapon
 {
     public WeaponType type;
+    public Vector3    muzzleOffset;
     public float      range;
     public float      bps;
     public float      reloadTime;
@@ -98,7 +98,7 @@ public struct Destroy
 public enum ProjectileType
 {
     Bullet,
-    Rocket
+    Missile
 }
 
 [System.Serializable] //TODO: maybe write custom inspector for this?
@@ -137,7 +137,7 @@ public struct Bullet
     public bool    canDamageSender;
 }
 
-public struct Rocket
+public struct Missile
 {
     public float speed;
     public float angularSpeed;
@@ -246,7 +246,7 @@ public enum EntityType
 {
     Ship,
     Bullet,
-    Rocket,
+    Missile,
     Player
 }
 
@@ -278,6 +278,21 @@ public static class Entities
         goRef.transform = go.transform;
     }
     
+    public static void CreateReferenceFromInstance(int entity, EntityType type, Vector3 position, float orientation, Vector3 scale, Entity instance)
+    {
+        ref var transform = ref TransformPool.Add(entity);
+        ref var goRef     = ref GoReferencePool.Add(entity);
+        
+        transform.position    = position;
+        transform.orientation = orientation;
+        transform.scale       = scale;
+        
+        instance.Id     = entity;
+        instance.Type   = type;
+        goRef.go        = instance;
+        goRef.transform = instance.transform;
+    }
+    
     public static void DestroyEntity(int entity)
     {
         if(DestroyPool.Has(entity) == false)
@@ -291,14 +306,22 @@ public static class Entities
     {
         var entity       = CreateEntity();
         var asset        = ShipAssetTable[assetId];
-        var prefab       = PrefabTable[asset.prefabId];
         
         ref var ship     = ref ShipPool.Add(entity);
         ref var hp       = ref HealthPool.Add(entity);
+        var     go       = Object.Instantiate(asset.prefab, 
+                                    position, 
+                                    Quaternion.AngleAxis(orientation, Vector3.forward));
         PlayerPool.Add(entity);
-        var weaponEntity = CreateWeapon(asset.weaponId, entity, EntityType.Player);
         
-        ship.size           = asset.size;
+        ship.weapons = new int[asset.weapons.Length];
+        for(var i = 0; i < asset.weapons.Length; ++i)
+        {
+            var weaponEntity = CreateWeapon(ref asset.weapons[i], entity, EntityType.Player);
+            ship.weapons[i] = weaponEntity;
+        }
+        
+        ship.collider       = go.GetComponent<Collider2D>();
         ship.rotationSpeed  = asset.rotationSpeed;
         ship.maxSpeed       = asset.maxSpeed;
         ship.acceleration   = asset.acceleration;
@@ -307,7 +330,7 @@ public static class Entities
         hp.current = asset.maxHp;
         hp.max     = asset.maxHp;
         
-        CreateReference(entity, EntityType.Player, position, orientation, scale, prefab);
+        CreateReferenceFromInstance(entity, EntityType.Player, position, orientation, scale, go);
     }
     
     public static void CreateMultipleShipsRandomly(int count)
@@ -321,24 +344,29 @@ public static class Entities
     
     public static int CreateAiShip(int entity, int assetId, Vector3 position, float orientation, Vector3 scale)
     {
-        var asset        = ShipAssetTable[assetId];
-        var prefab       = PrefabTable[asset.prefabId];
-        
+        var     asset    = ShipAssetTable[assetId];
         ref var ship     = ref ShipPool.Add(entity);
         ref var hp       = ref HealthPool.Add(entity);
         ref var movement = ref MovementPool.Add(entity);
         ref var ai       = ref AiPool.Add(entity);
         ref var sm       = ref StateMachinePool.Add(entity);
         ref var patrol   = ref PatrolPool.Add(entity);
+        var     go       = Object.Instantiate(asset.prefab, 
+                                    position, 
+                                    Quaternion.AngleAxis(orientation, Vector3.forward));
         
-        var weaponEntity = CreateWeapon(asset.weaponId, entity, EntityType.Ship);
+        ship.weapons = new int[asset.weapons.Length];
+        for(var i = 0; i < asset.weapons.Length; ++i)
+        {
+            var weaponEntity = CreateWeapon(ref asset.weapons[i], entity, EntityType.Player);
+            ship.weapons[i] = weaponEntity;
+        }
         
-        ship.size           = asset.size;
+        ship.collider       = go.GetComponent<Collider2D>();
         ship.rotationSpeed  = asset.rotationSpeed;
         ship.maxSpeed       = asset.maxSpeed;
         ship.acceleration   = asset.acceleration;
         ship.damping        = asset.damping;
-        ship.weapon         = weaponEntity;
         
         hp.current          = asset.maxHp;
         hp.max              = asset.maxHp;
@@ -351,41 +379,21 @@ public static class Entities
         sm.currentState     = EnemyState.Patrolling;
         patrol.destination  = RandomPointInsideWorldBounds();    
         
-        CreateReference(entity, EntityType.Ship, position, orientation, scale, prefab);
+        CreateReferenceFromInstance(entity, EntityType.Ship, position, orientation, scale, go);
         
         return entity;
     }
     
-    public static int CreateWeapon(int assetId, int owner, EntityType ownerType)
+    public static int CreateWeapon(ref Weapon config, int owner, EntityType ownerType)
     {
-        var asset      = WeaponTable[assetId];
         var entity     = CreateEntity();
         ref var weapon = ref WeaponPool.Add(entity);
         
-        weapon = asset;
+        weapon = config;
         
         weapon.owner          = owner;
         weapon.reloadTime     = 1 / weapon.bps;
         weapon.reloadProgress = weapon.reloadTime;
-        
-        switch(ownerType)
-        {
-            case EntityType.Ship:
-            {
-                ref var ship = ref ShipPool.Get(owner);
-                
-                ship.weapon = entity;
-            }
-            break;
-            
-            case EntityType.Player:
-            {
-                ref var ship = ref ShipPool.Get(owner);
-                
-                ship.weapon = entity;
-            }
-            break;
-        }
         
         return entity;
     }
@@ -433,32 +441,32 @@ public static class Entities
         movement.steering.angular = 0f;
     }
     
-    public static int CreateRocket(Vector3 position, Vector3 direction, int owner, int assetId)
+    public static int CreateMissile(Vector3 position, Vector3 direction, int owner, int assetId)
     {
-        var entity      = CreateEntity();
-        var asset       = ProjectileTable[assetId];
-        var prefab      = PrefabTable[asset.prefabId];
-        var orientation = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        var entity        = CreateEntity();
+        var asset         = ProjectileTable[assetId];
+        var prefab        = PrefabTable[asset.prefabId];
+        var orientation   = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         
-        ref var rocket   = ref RocketPool.Add(entity);
-        ref var movement = ref MovementPool.Add(entity);
-        ref var health   = ref HealthPool.Add(entity);
+        ref var missile   = ref MissilePool.Add(entity);
+        ref var movement  = ref MovementPool.Add(entity);
+        ref var health    = ref HealthPool.Add(entity);
         
         direction.Normalize();
         
-        rocket.speed                     = asset.speed;
-        rocket.angularSpeed              = asset.angularSpeed;
-        rocket.accelerationNoTarget      = asset.accelerationNoTarget;
-        rocket.accelerationWithTarget    = asset.accelerationWithTarget;
-        rocket.radius                    = asset.radius;
-        rocket.splashRadius              = asset.splashRadius;
-        rocket.searchRadius              = asset.searchRadius;
-        rocket.fov                       = asset.fov;
-        rocket.flightDistance            = asset.flightDistance;
-        rocket.damage                    = asset.damage;
-        rocket.explosionDamage           = asset.explosionDamage;
-        rocket.sender                    = owner;
-        rocket.target                    = -1;
+        missile.speed                     = asset.speed;
+        missile.angularSpeed              = asset.angularSpeed;
+        missile.accelerationNoTarget      = asset.accelerationNoTarget;
+        missile.accelerationWithTarget    = asset.accelerationWithTarget;
+        missile.radius                    = asset.radius;
+        missile.splashRadius              = asset.splashRadius;
+        missile.searchRadius              = asset.searchRadius;
+        missile.fov                       = asset.fov;
+        missile.flightDistance            = asset.flightDistance;
+        missile.damage                    = asset.damage;
+        missile.explosionDamage           = asset.explosionDamage;
+        missile.sender                    = owner;
+        missile.target                    = -1;
         
         movement.velocity         = direction * (asset.speed * 0.7f);
         movement.steering.angular = 0f;
@@ -466,14 +474,17 @@ public static class Entities
         health.max     = asset.health;
         health.current = asset.health;
         
-        CreateReference(entity, EntityType.Rocket, position, orientation, Vector3.one, prefab);
+        CreateReference(entity, EntityType.Missile, position, orientation, Vector3.one, prefab);
         return entity;
     }
     
     public static void DestroyShip(int entity)
     {
         ref var ship = ref ShipPool.Get(entity);
-        DestroyEntity(ship.weapon);
+        foreach(var weaponId in ship.weapons)
+        {
+            DestroyEntity(weaponId);
+        }
         DestroyEntity(entity);
     }
     
@@ -536,7 +547,13 @@ public static class Entities
             
             if(health.current <= 0)
             {
-                DestroyEntity(entity);
+                if (ShipPool.Has(entity))
+                {
+                    DestroyShip(entity);
+                }else
+                {
+                    DestroyEntity(entity);
+                }
             }
         }
     }    
@@ -639,20 +656,25 @@ public static class Entities
         }
     }
     
-    private static Collider2D[] shipColisionResults = new Collider2D[32];
+    private static Collider2D[]    shipCollisionResults = new Collider2D[32];
+    private static ContactFilter2D shipContactFilter = new ContactFilter2D(){
+                                                        layerMask      = Physics2D.AllLayers,
+                                                        minDepth       = Mathf.Infinity,
+                                                        maxDepth       = Mathf.Infinity,
+                                                        minNormalAngle = Mathf.Infinity,
+                                                        maxNormalAngle = Mathf.Infinity};
     public static void UpdateShips(float dt)
     {
         foreach(var entity in ShipsQuery)
         {
             ref var ship      = ref ShipPool.Get(entity);
-            ref var transform = ref TransformPool.Get(entity);
             
             //handle collisions
-            var collisionsCount = Physics2D.OverlapBoxNonAlloc(transform.position, ship.size, transform.orientation, shipColisionResults);
+            var collisionsCount = ship.collider.OverlapCollider(shipContactFilter, shipCollisionResults);
             
             for(var i = 0; i < collisionsCount; ++i)
             {
-                var coll = shipColisionResults[i];
+                var coll = shipCollisionResults[i];
                 
                 if(coll.TryGetComponent(out Entity collidedEntity))
                 {
@@ -662,21 +684,43 @@ public static class Entities
                     if(collidedEntity.Type == EntityType.Ship)
                     {
                         //TODO: Handle collisions properly
-                        if((PlayerPool.Has(collidedEntity.Id) || PlayerPool.Has(entity)) && PlayerInvisible)
+                        if((PlayerPool.Has(collidedEntity.Id) || 
+                            PlayerPool.Has(entity)) && PlayerInvisible)
                         {
                             
                         }else
                         {
-                            DestroyEntity(entity);
-                            DestroyEntity(collidedEntity.Id);
+                            DestroyShip(entity);
+                            DestroyShip(collidedEntity.Id);
                             continue;
                         }
-                        
                     }
                 }
             }
+        }
+    }
+    
+    private static RaycastHit2D[] laserCollisionBuffer = new RaycastHit2D[32];
+    public static void UpdateWeapons(float dt)
+    {
+        foreach(var entity in WeaponsQuery)
+        {
+            ref var weapon    = ref WeaponPool.Get(entity);
             
-            ref var weapon = ref WeaponPool.Get(ship.weapon);
+            //fuck you, leopotam
+            try
+            {
+                if(DestroyPool.Has(weapon.owner))
+                {
+                    continue;
+                }
+            }catch
+            {
+                continue;
+            }
+            
+            
+            ref var transform = ref TransformPool.Get(weapon.owner);
             
             //tick reloading
             weapon.reloadProgress += dt;
@@ -685,53 +729,77 @@ public static class Entities
             if(weapon.shooting && weapon.type == WeaponType.Laser) //if laser
             {
                 var orientation = transform.orientation * Mathf.Deg2Rad;
-                var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
-                var hit         = Physics2D.Raycast(transform.position + direction * 2f, 
-                                                    direction, 
-                                                    weapon.range);
+                var sin         = Mathf.Sin(orientation);
+                var cos         = Mathf.Cos(orientation);
+                var direction   = new Vector3(cos, sin, 0).normalized;
+                var offset = new Vector3(cos * weapon.muzzleOffset.x - sin * weapon.muzzleOffset.y,
+                                         sin * weapon.muzzleOffset.x + cos * weapon.muzzleOffset.y);
+                var position = transform.position + offset;
+                var hitCount = Physics2D.Raycast(position, 
+                                                 direction,
+                                                 shipContactFilter,
+                                                 laserCollisionBuffer,
+                                                 weapon.range);
                 
-                if(hit.collider == null)
+                float   closestDistance = 1000f;
+                Entity  hitEntity       = null;
+                Vector3 hitPoint        = Vector3.zero;
+                
+                for(var i = 0; i < hitCount; ++i)
                 {
-                    DrawLaser(new Laser{
-                                start         = transform.position, 
-                                end           = transform.position + direction * weapon.range, 
-                                materialIndex = weapon.materialIndex,
-                                thickness     = weapon.laserThickness
-                                });
+                    if(laserCollisionBuffer[i].collider.TryGetComponent(out Entity hittedEntity))
+                    {
+                        if(hittedEntity.Id != weapon.owner)
+                        {
+                            var distance = Vector3.Distance(laserCollisionBuffer[i].point, position);
+                            if(distance < closestDistance)
+                            {
+                                hitEntity       = hittedEntity;
+                                closestDistance = distance;
+                                hitPoint        = laserCollisionBuffer[i].point;
+                            }
+                        }
+                    }
+                }
+                
+                if(hitEntity == null)
+                {
+                    DrawLaser(position, 
+                              transform.position + direction * weapon.range, 
+                              weapon.materialIndex, 
+                              weapon.laserThickness);
                 }else
                 {
-                    DrawLaser(new Laser{
-                                start         = transform.position, 
-                                end           = hit.point, 
-                                materialIndex = weapon.materialIndex,
-                                thickness     = weapon.laserThickness
-                                });
+                    DrawLaser(position, 
+                              hitPoint, 
+                              weapon.materialIndex,
+                              weapon.laserThickness);
                 }
                 
                 if(weapon.reloadProgress >= weapon.reloadTime)
                 {
-                    if(hit.collider != null)
+                    if(hitEntity != null)
                     {
-                        if(hit.collider.TryGetComponent(out Entity hitEntity))
+                        switch(hitEntity.Type)
                         {
-                            if(hitEntity.Id != weapon.owner)
+                            case EntityType.Player:
                             {
-                                switch(hitEntity.Type)
-                                {
-                                    case EntityType.Player:
-                                    {
-                                        if(PlayerInvisible == false)
-                                            ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
-                                    }
-                                    break;
-                                    
-                                    case EntityType.Ship:
-                                    {
-                                        ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
-                                    }
-                                    break;
-                                }
+                                if(PlayerInvisible == false)
+                                    ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
                             }
+                            break;
+                            
+                            case EntityType.Ship:
+                            {
+                                ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
+                            }
+                            break;
+                            
+                            case EntityType.Missile:
+                            {
+                                ApplyDamageToEntity(hitEntity.Id, weapon.laserDamage);
+                            }
+                            break;
                         }
                     }
                     weapon.reloadProgress = 0f;
@@ -739,26 +807,32 @@ public static class Entities
             }else if(weapon.shooting && weapon.reloadProgress >= weapon.reloadTime)
             {
                 var orientation = transform.orientation * Mathf.Deg2Rad;
-                var direction   = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
+                var sin         = Mathf.Sin(orientation);
+                var cos         = Mathf.Cos(orientation);
+                var direction   = new Vector3(cos, sin, 0);
                 var projectile  = ProjectileTable[weapon.projectileId];
                 
                 switch(projectile.type)
                 {
                     case ProjectileType.Bullet:
                     {
-                        CreateBullet(transform.position + direction * 1f,
+                        var offset = new Vector3(cos * weapon.muzzleOffset.x - sin * weapon.muzzleOffset.y,
+                                                 sin * weapon.muzzleOffset.x + cos * weapon.muzzleOffset.y);
+                        CreateBullet(transform.position + offset,
                                      direction, 
                                      weapon.range, 
-                                     entity, 
+                                     weapon.owner, 
                                      weapon.projectileId);
                     }
                     break;
                     
-                    case ProjectileType.Rocket:
+                    case ProjectileType.Missile:
                     {
-                        CreateRocket(transform.position + direction * 1f, 
+                        var offset = new Vector3(cos * weapon.muzzleOffset.x - sin * weapon.muzzleOffset.y,
+                                                 sin * weapon.muzzleOffset.x + cos * weapon.muzzleOffset.y);
+                        CreateMissile(transform.position + offset, 
                                      direction, 
-                                     entity, 
+                                     weapon.owner, 
                                      weapon.projectileId);
                     }
                     break;
@@ -810,74 +884,66 @@ public static class Entities
         }
     }
     
-    private static Collider2D[] rocketsCollisionBuffer = new Collider2D[32];
-    public static void UpdateRockets(float dt)
+    private static Collider2D[] missilesCollisionBuffer = new Collider2D[32];
+    public static void UpdateMissiles(float dt)
     {
-        foreach(var entity in RocketsQuery)
+        foreach(var entity in MissilesQuery)
         {
-            ref var rocket    = ref RocketPool.Get(entity);
+            ref var missile   = ref MissilePool.Get(entity);
             ref var transform = ref TransformPool.Get(entity);
             ref var movement  = ref MovementPool.Get(entity);
             var orientation   = transform.orientation * Mathf.Deg2Rad;
             
-            if(rocket.target != -1)
+            if(missile.target != -1)
             {
                 //madness bcs there is no way to check if entity is alive in leoecs
                 try
                 {
-                    if(DestroyPool.Has(rocket.target))
+                    if(DestroyPool.Has(missile.target))
                     {
-                        rocket.target = -1;
+                        missile.target = -1;
                     }
                 }catch
                 {
-                    rocket.target = -1;
+                    missile.target = -1;
                 }
-            }
-            
-            if(InsideWorldBounds(transform.position) == false)
-            {
-                DestroyEntity(entity);
-                continue;
             }
             
             //resolve collisions
             var collCount = Physics2D.OverlapCircleNonAlloc(transform.position,
-                                                            rocket.radius,
-                                                            rocketsCollisionBuffer);
+                                                            missile.radius,
+                                                            missilesCollisionBuffer);
 
             var destroyed = false;
                                                                               
             for(var i = 0; i < collCount; ++i)
             {
-                var coll = rocketsCollisionBuffer[i];
+                var coll = missilesCollisionBuffer[i];
                 
                 if(coll.TryGetComponent(out Entity collidedEntity))
                 {
                     if(collidedEntity.Id == entity)
                         continue;
                         
-                    if(collidedEntity.Id == rocket.sender)
+                    if(collidedEntity.Id == missile.sender)
                         continue;
                         
                     switch(collidedEntity.Type)
                     {
                         case EntityType.Ship:
                         {
-                            ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
+                            ApplyDamageToEntity(collidedEntity.Id, missile.damage);
+                            destroyed = true;
                         }
                         break;
                         
                         case EntityType.Player:
                         {
                             if(PlayerInvisible == false)
-                                ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
-                        }
-                        break;
-                        
-                        case EntityType.Rocket:
-                        {
-                            ApplyDamageToEntity(collidedEntity.Id, rocket.damage);
+                            {
+                                ApplyDamageToEntity(collidedEntity.Id, missile.damage);
+                                destroyed = true;
+                            }
                         }
                         break;
                         
@@ -885,7 +951,6 @@ public static class Entities
                             break;
                     }
                     
-                    destroyed = true;
                     break;
                 }
             }
@@ -894,38 +959,38 @@ public static class Entities
             if(destroyed)
             {
                 collCount = Physics2D.OverlapCircleNonAlloc(transform.position, 
-                                                            rocket.splashRadius,
-                                                            rocketsCollisionBuffer);
+                                                            missile.splashRadius,
+                                                            missilesCollisionBuffer);
                                                             
                 for(var i = 0; i < collCount; ++i)
                 {
-                    var coll = rocketsCollisionBuffer[i];
+                    var coll = missilesCollisionBuffer[i];
                     
                     if(coll.TryGetComponent(out Entity collidedEntity))
                     {
                         if(collidedEntity.Id == entity)
                             continue;
                         
-                        if(collidedEntity.Id == rocket.sender)
+                        if(collidedEntity.Id == missile.sender)
                             continue;
                             
                         switch(collidedEntity.Type)
                         {
                             case EntityType.Ship:
                             {
-                                ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                                ApplyDamageToEntity(collidedEntity.Id, missile.explosionDamage);
                             }
                             break;
                             
                             case EntityType.Player:
                             {
                                 if(PlayerInvisible == false)
-                                    ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                                    ApplyDamageToEntity(collidedEntity.Id, missile.explosionDamage);
                             }
                             break;
                             
-                            case EntityType.Rocket:
-                                ApplyDamageToEntity(collidedEntity.Id, rocket.explosionDamage);
+                            case EntityType.Missile:
+                                ApplyDamageToEntity(collidedEntity.Id, missile.explosionDamage);
                             break;
                             
                             default:
@@ -939,12 +1004,12 @@ public static class Entities
             }
             
             //search for target
-            if(rocket.target == -1)
+            if(missile.target == -1)
             {
                 collCount = Physics2D.OverlapCircleNonAlloc(
                                         transform.position,
-                                        rocket.searchRadius, 
-                                        rocketsCollisionBuffer);
+                                        missile.searchRadius, 
+                                        missilesCollisionBuffer);
             
                 var closestDistance   = 10000f;
                 var closestDifference = 10000f;
@@ -956,7 +1021,7 @@ public static class Entities
                 
                 for(var i = 0; i < collCount; ++i)
                 {
-                    var coll = rocketsCollisionBuffer[i];
+                    var coll = missilesCollisionBuffer[i];
                     
                     if(coll.TryGetComponent(out Entity collidedEntity))
                     {
@@ -987,9 +1052,9 @@ public static class Entities
                 {
                     var fov = Mathf.Acos(closestDistance) * Mathf.Rad2Deg;
                     
-                    if(fov <= rocket.fov)
+                    if(fov <= missile.fov)
                     {
-                        rocket.target = closestEntity;
+                        missile.target = closestEntity;
                     }
                 }
             }
@@ -997,17 +1062,17 @@ public static class Entities
             //rotate
             var steering = new Steering();
 
-            if(rocket.target == -1)
+            if(missile.target == -1)
             {
                 steering.angular = 0f;
             }else
             {
-                ref var targetTransform = ref TransformPool.Get(rocket.target);
+                ref var targetTransform = ref TransformPool.Get(missile.target);
                 var directionToTarget   = targetTransform.position - transform.position;
                 var targetOrientation   = Mathf.Atan2(directionToTarget.y, directionToTarget.x) * Mathf.Rad2Deg;
                 var angularRotation = Mathf.MoveTowardsAngle(transform.orientation, 
                                                              targetOrientation, 
-                                                             rocket.angularSpeed * dt);
+                                                             missile.angularSpeed * dt);
 
                 steering.angular = angularRotation - transform.orientation;
             }
@@ -1017,19 +1082,19 @@ public static class Entities
             var direction = new Vector3(Mathf.Cos(orientation), 
                                         Mathf.Sin(orientation));
             
-            if(rocket.target == -1)
+            if(missile.target == -1)
             {
-                steering.linear = (direction.normalized * rocket.accelerationNoTarget) - movement.velocity;
+                steering.linear = (direction.normalized * missile.accelerationNoTarget) - movement.velocity;
             }else
             {
-                steering.linear = (direction.normalized * rocket.accelerationWithTarget) - movement.velocity;
+                steering.linear = (direction.normalized * missile.accelerationWithTarget) - movement.velocity;
             }
             
             movement.steering = steering;
             
-            rocket.flightDistance -= movement.velocity.magnitude * dt;
+            missile.flightDistance -= movement.velocity.magnitude * dt;
             
-            if(rocket.flightDistance <= 0)
+            if(missile.flightDistance <= 0)
             {
                 DestroyEntity(entity);
             }

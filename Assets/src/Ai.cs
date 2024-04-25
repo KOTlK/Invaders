@@ -95,11 +95,14 @@ public static class Ai
                     ref var transform       = ref TransformPool.Get(entity);
                     ref var holdDistance    = ref HoldDistancePool.Get(entity);
                     ref var ship            = ref ShipPool.Get(entity);
-                    ref var weapon          = ref WeaponPool.Get(ship.weapon);
                     
                     if(DestroyPool.Has(target.entity))
                     {
-                        weapon.shooting = false;
+                        foreach(var weaponId in ship.weapons)
+                        {
+                            ref var weapon  = ref WeaponPool.Get(weaponId);
+                            weapon.shooting = false;
+                        }
                         
                         ToPatrolling(entity, ref ai, ref stateMachine);
                         break;
@@ -107,14 +110,21 @@ public static class Ai
                     
                     ref var targetTransform = ref TransformPool.Get(target.entity);
                     
-                    weapon.shooting = true;
-                    
+                    foreach(var weaponId in ship.weapons)
+                    {
+                        ref var weapon  = ref WeaponPool.Get(weaponId);
+                        weapon.shooting = true;
+                    }
                     
                     var sqrDistanceToTarget = (targetTransform.position - transform.position).sqrMagnitude;
                     
                     if(sqrDistanceToTarget >= holdDistance.max * holdDistance.max)
                     {
-                        weapon.shooting = false;
+                        foreach(var weaponId in ship.weapons)
+                        {
+                            ref var weapon  = ref WeaponPool.Get(weaponId);
+                            weapon.shooting = false;
+                        }
                         
                         ToFollowingTarget(entity, ref ai, ref stateMachine, target.entity);
                         break;
@@ -161,11 +171,20 @@ public static class Ai
         ref var holdDistance = ref HoldDistancePool.Add(entity);
         ref var engage       = ref EngagePool.Add(entity);
         ref var ship         = ref ShipPool.Get(entity);
-        ref var weapon       = ref WeaponPool.Get(ship.weapon);
+        var shortestRange    = 3000f;
+        
+        foreach(var weaponId in ship.weapons)
+        {
+            ref var weapon = ref WeaponPool.Get(weaponId);
+            if(weapon.range < shortestRange)
+            {
+                shortestRange = weapon.range;
+            }
+        }
         
         holdDistance.distance = ai.holdDistance;
         holdDistance.max      = ai.maxHoldDistance;
-        engage.weaponRange    = weapon.range;
+        engage.weaponRange    = shortestRange;
         
         DelComponentIfExist(FollowPool, entity);
         DelComponentIfExist(PatrolPool, entity);
@@ -191,7 +210,7 @@ public static class Ai
             ref var movement        = ref MovementPool.Get(entity);
             ref var ship            = ref ShipPool.Get(entity);
             ref var ai              = ref AiPool.Get(entity);
-            ref var weapon          = ref WeaponPool.Get(ship.weapon);
+            ref var weapon          = ref WeaponPool.Get(ship.weapons[0]);
             ref var targetTransform = ref TransformPool.Get(target.entity);
             
             var targetVelocity = Vector3.zero;

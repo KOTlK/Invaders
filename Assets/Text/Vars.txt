@@ -1,2 +1,3 @@
 PlayerInvisible 1
 CameraSpeed 80
+PlayerShip 2
