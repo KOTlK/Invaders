@@ -41,7 +41,13 @@ public static class Vars
         {
             case "System.Boolean":
             {
-                field.SetValue(null, Convert.ToBoolean(Int32.Parse(value)));
+                if(value.ToLower() == "true")
+                {
+                    field.SetValue(null, true);
+                }else if(value.ToLower() == "false")
+                {
+                    field.SetValue(null, false);
+                }
             }
             break;
             

@@ -69,18 +69,18 @@ public enum WeaponType
 [System.Serializable]
 public struct Weapon
 {
-    public WeaponType type;
-    public Vector3    muzzleOffset;
-    public float      range;
-    public float      bps;
-    public float      reloadTime;
-    public float      reloadProgress;
-    public float      laserThickness;
-    public int        projectileId;
-    public int        owner;
-    public int        materialIndex;
-    public int        laserDamage;
-    public bool       shooting;
+    public WeaponType       type;
+    public Vector3          muzzleOffset;
+    public UnitedProjectile projectile;
+    public float            range;
+    public float            bps;
+    public float            reloadTime;
+    public float            reloadProgress;
+    public float            laserThickness;
+    public int              owner;
+    public int              materialIndex;
+    public int              laserDamage;
+    public bool             shooting;
 }
 
 public struct Player
@@ -105,10 +105,10 @@ public enum ProjectileType
 public struct UnitedProjectile
 {
     public ProjectileType type;
+    public Entity         prefab;
     public bool           instanced;
     public int            mesh;
     public int            material;
-    public int            prefabId; // prefab id in prefab table
     public int            damage;
     public int            health;
     public int            explosionDamage;
@@ -184,6 +184,33 @@ public struct Health
 public struct Damage
 {
     public int amount;
+}
+
+public enum PowerupEffect
+{
+    Damage,
+    Speed,
+    Shield,
+    BulletSpeed
+}
+
+public struct Effect
+{
+    public int   affectedEntity;
+    public int   id;
+    public float timeLeft;
+}
+
+[System.Serializable]
+public struct EffectValues
+{
+    public PowerupEffect effectType;
+    
+    public int   damageBoost;
+    public int   shieldCapatity;
+    public float effectDuration;
+    public float speedBoost;
+    public float bulletSpeedBoost;
 }
 
 public struct FollowTarget
@@ -317,7 +344,7 @@ public static class Entities
         ship.weapons = new int[asset.weapons.Length];
         for(var i = 0; i < asset.weapons.Length; ++i)
         {
-            var weaponEntity = CreateWeapon(ref asset.weapons[i], entity, EntityType.Player);
+            var weaponEntity = CreateWeapon(asset.weapons[i], entity, EntityType.Player);
             ship.weapons[i] = weaponEntity;
         }
         
@@ -358,7 +385,7 @@ public static class Entities
         ship.weapons = new int[asset.weapons.Length];
         for(var i = 0; i < asset.weapons.Length; ++i)
         {
-            var weaponEntity = CreateWeapon(ref asset.weapons[i], entity, EntityType.Player);
+            var weaponEntity = CreateWeapon(asset.weapons[i], entity, EntityType.Player);
             ship.weapons[i] = weaponEntity;
         }
         
@@ -384,7 +411,7 @@ public static class Entities
         return entity;
     }
     
-    public static int CreateWeapon(ref Weapon config, int owner, EntityType ownerType)
+    public static int CreateWeapon(in Weapon config, int owner, EntityType ownerType)
     {
         var entity     = CreateEntity();
         ref var weapon = ref WeaponPool.Add(entity);
@@ -398,10 +425,9 @@ public static class Entities
         return entity;
     }
     
-    public static void CreateBullet(Vector3 position, Vector3 direction, float maxDistance, int owner, int assetId)
+    public static void CreateBullet(Vector3 position, Vector3 direction, float maxDistance, int owner, in UnitedProjectile asset)
     {        
         var orientation = Mathf.Atan2(direction.y, direction.x);
-        var asset       = ProjectileTable[assetId];
         var entity      = CreateEntity();
         
         if(asset.instanced)
@@ -417,7 +443,7 @@ public static class Entities
             instance.material = asset.material;
         }else
         {
-            var prefab      = PrefabTable[asset.prefabId];
+            var prefab      = asset.prefab;
 
             CreateReference(entity, EntityType.Bullet, position, orientation, Vector3.one, prefab);
         }
@@ -441,11 +467,10 @@ public static class Entities
         movement.steering.angular = 0f;
     }
     
-    public static int CreateMissile(Vector3 position, Vector3 direction, int owner, int assetId)
+    public static int CreateMissile(Vector3 position, Vector3 direction, int owner, in UnitedProjectile asset)
     {
         var entity        = CreateEntity();
-        var asset         = ProjectileTable[assetId];
-        var prefab        = PrefabTable[asset.prefabId];
+        var prefab        = asset.prefab;
         var orientation   = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         
         ref var missile   = ref MissilePool.Add(entity);
@@ -532,6 +557,49 @@ public static class Entities
             ref var damage = ref DamagePool.Add(entity);
             damage.amount = damageAmount;
         }
+    }
+    
+    public static void ApplyEffect(int target, int effectId)
+    {
+            var entity = CreateEntity();
+            var asset  = EffectTable[effectId];
+        ref var effect = ref EffectPool.Add(entity);
+        
+        effect.id             = effectId;
+        effect.affectedEntity = target;
+        effect.timeLeft       = asset.effectDuration;
+        
+        switch(asset.effectType)
+        {
+            case PowerupEffect.Damage:
+            {
+                
+            }
+            break;
+            
+            case PowerupEffect.Speed:
+            {
+                
+            }
+            break;
+            
+            case PowerupEffect.Shield:
+            {
+                
+            }
+            break;
+            
+            case PowerupEffect.BulletSpeed:
+            {
+                
+            }
+            break;
+        }
+    }
+    
+    public static void RemoveEffect(int target)
+    {
+        //#Incomplete
     }
     
     public static void UpdateHealth()
@@ -810,7 +878,7 @@ public static class Entities
                 var sin         = Mathf.Sin(orientation);
                 var cos         = Mathf.Cos(orientation);
                 var direction   = new Vector3(cos, sin, 0);
-                var projectile  = ProjectileTable[weapon.projectileId];
+                var projectile  = weapon.projectile;
                 
                 switch(projectile.type)
                 {
@@ -822,7 +890,7 @@ public static class Entities
                                      direction, 
                                      weapon.range, 
                                      weapon.owner, 
-                                     weapon.projectileId);
+                                     weapon.projectile);
                     }
                     break;
                     
@@ -833,7 +901,7 @@ public static class Entities
                         CreateMissile(transform.position + offset, 
                                      direction, 
                                      weapon.owner, 
-                                     weapon.projectileId);
+                                     weapon.projectile);
                     }
                     break;
                 }
@@ -1014,7 +1082,6 @@ public static class Entities
                 var closestDistance   = 10000f;
                 var closestDifference = 10000f;
                 var closestEntity     = -1;
-                var closestDirection  = Vector3.zero;
                 var lookDirection     = new Vector3(Mathf.Cos(orientation), Mathf.Sin(orientation), 0);
                 lookDirection.Normalize();
 
@@ -1042,7 +1109,6 @@ public static class Entities
                                 closestDistance   = distance;
                                 closestDifference = difference;
                                 closestEntity     = collidedEntity.Id;
-                                closestDirection  = directionToTarget;
                             }
                         }
                     }

@@ -20,6 +20,7 @@ public static class Queries
     public static EcsFilter EnemyStateMachineQuery;
     public static EcsFilter MissilesQuery;
     public static EcsFilter WeaponsQuery;
+    public static EcsFilter EffectsQuery;
     
     public static void InitQueries()
     {
@@ -40,5 +41,6 @@ public static class Queries
         EnemyStateMachineQuery   = MainWorld.Filter<EnemyStateMachine>().Exc<Destroy>().End();
         MissilesQuery             = MainWorld.Filter<Missile>().Inc<Movement>().Inc<Transform>().Exc<Destroy>().End();
         WeaponsQuery             = MainWorld.Filter<Weapon>().Exc<Destroy>().End();
+        EffectsQuery             = MainWorld.Filter<Effect>().Exc<Destroy>().End();
     }
 }

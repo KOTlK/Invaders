@@ -239,7 +239,7 @@ public static class Ai
             
             //aim at target
             var distanceToTarget = Vector3.Distance(transform.position, targetTransform.position);
-            var time             = distanceToTarget / ProjectileTable[weapon.projectileId].speed;
+            var time             = distanceToTarget / weapon.projectile.speed;
             var targetPosition   = targetTransform.position + targetVelocity * time;
             var targetDirection  = targetPosition - transform.position;
             

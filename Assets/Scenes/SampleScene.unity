@@ -388,73 +388,6 @@ MonoBehaviour:
   VarsAsset: {fileID: 4900000, guid: 03a39f1850d56794db0d53be9cc0b1fb, type: 3}
   WorldSize: {x: 50, y: 50, z: 0}
   Camera: {fileID: 519420031}
-  ProjectilesTable:
-  - type: 0
-    instanced: 1
-    mesh: 0
-    material: 0
-    prefabId: 1
-    damage: 2
-    health: 0
-    explosionDamage: 0
-    canDamageSender: 0
-    speed: 20
-    angularSpeed: 0
-    accelerationNoTarget: 0
-    accelerationWithTarget: 0
-    radius: 0.2
-    timeToLive: 10
-    splashRadius: 0
-    searchRadius: 0
-    fov: 0
-    flightDistance: 0
-    maxLength: 0
-    thickness: 0
-    attackDelay: 0
-  - type: 0
-    instanced: 1
-    mesh: 2
-    material: 2
-    prefabId: 1
-    damage: 10
-    health: 0
-    explosionDamage: 0
-    canDamageSender: 0
-    speed: 13
-    angularSpeed: 0
-    accelerationNoTarget: 0
-    accelerationWithTarget: 0
-    radius: 0.3
-    timeToLive: 15
-    splashRadius: 0
-    searchRadius: 0
-    fov: 0
-    flightDistance: 0
-    maxLength: 0
-    thickness: 0
-    attackDelay: 0
-  - type: 1
-    instanced: 0
-    mesh: 0
-    material: 0
-    prefabId: 4
-    damage: 20
-    health: 10
-    explosionDamage: 10
-    canDamageSender: 0
-    speed: 13
-    angularSpeed: 230
-    accelerationNoTarget: 10
-    accelerationWithTarget: 32
-    radius: 0.3
-    timeToLive: 15
-    splashRadius: 1
-    searchRadius: 5
-    fov: 40
-    flightDistance: 100
-    maxLength: 0
-    thickness: 0
-    attackDelay: 0
   PrefabsTable:
   - {fileID: 6740681993998207679, guid: d0ccc8c861ee4bb4a8fc3ce613079ec9, type: 3}
   - {fileID: 4774465753761943731, guid: deae759c7739b3e41944d22b487ba655, type: 3}
@@ -466,24 +399,68 @@ MonoBehaviour:
     weapons:
     - type: 2
       muzzleOffset: {x: 0.65, y: 0.1, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 0
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 0
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0
+        timeToLive: 0
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 10
       bps: 8
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0.1
-      projectileId: 0
       owner: 0
       materialIndex: 3
       laserDamage: 5
       shooting: 0
     - type: 2
       muzzleOffset: {x: 0.65, y: -0.1, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 0
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 0
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0
+        timeToLive: 0
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 10
       bps: 8
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0.1
-      projectileId: 0
       owner: 0
       materialIndex: 3
       laserDamage: 5
@@ -504,48 +481,136 @@ MonoBehaviour:
     weapons:
     - type: 0
       muzzleOffset: {x: 0.25, y: 0.2, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 1
+        mesh: 0
+        material: 0
+        damage: 2
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 20
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0.2
+        timeToLive: 10
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 8
       bps: 100
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 0
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 0
       muzzleOffset: {x: 0.25, y: -0.2, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 1
+        mesh: 0
+        material: 0
+        damage: 2
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 20
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0.2
+        timeToLive: 10
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 8
       bps: 100
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 0
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 0
       muzzleOffset: {x: 0.25, y: 0.26, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 1
+        mesh: 0
+        material: 0
+        damage: 2
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 20
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0.2
+        timeToLive: 10
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 8
       bps: 100
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 0
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 0
       muzzleOffset: {x: 0.25, y: -0.26, z: 0}
+      projectile:
+        type: 0
+        prefab: {fileID: 0}
+        instanced: 1
+        mesh: 0
+        material: 0
+        damage: 2
+        health: 0
+        explosionDamage: 0
+        canDamageSender: 0
+        speed: 20
+        angularSpeed: 0
+        accelerationNoTarget: 0
+        accelerationWithTarget: 0
+        radius: 0.2
+        timeToLive: 10
+        splashRadius: 0
+        searchRadius: 0
+        fov: 0
+        flightDistance: 0
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 8
       bps: 100
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 0
       owner: 0
       materialIndex: 0
       laserDamage: 0
@@ -566,48 +631,136 @@ MonoBehaviour:
     weapons:
     - type: 1
       muzzleOffset: {x: 0.36, y: 0.47, z: 0}
+      projectile:
+        type: 1
+        prefab: {fileID: 6316626191963090503, guid: 4479f7960633b1d4a96db71214782a44, type: 3}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 20
+        health: 10
+        explosionDamage: 10
+        canDamageSender: 0
+        speed: 13
+        angularSpeed: 230
+        accelerationNoTarget: 10
+        accelerationWithTarget: 32
+        radius: 0.3
+        timeToLive: 15
+        splashRadius: 1
+        searchRadius: 5
+        fov: 40
+        flightDistance: 100
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 30
       bps: 2
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 2
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 1
       muzzleOffset: {x: 0.36, y: -0.47, z: 0}
+      projectile:
+        type: 1
+        prefab: {fileID: 6316626191963090503, guid: 4479f7960633b1d4a96db71214782a44, type: 3}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 20
+        health: 10
+        explosionDamage: 10
+        canDamageSender: 0
+        speed: 13
+        angularSpeed: 230
+        accelerationNoTarget: 10
+        accelerationWithTarget: 32
+        radius: 0.3
+        timeToLive: 15
+        splashRadius: 1
+        searchRadius: 5
+        fov: 40
+        flightDistance: 100
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 30
       bps: 2
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 2
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 1
       muzzleOffset: {x: 0.36, y: 0.6, z: 0}
+      projectile:
+        type: 1
+        prefab: {fileID: 6316626191963090503, guid: 4479f7960633b1d4a96db71214782a44, type: 3}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 20
+        health: 10
+        explosionDamage: 10
+        canDamageSender: 0
+        speed: 13
+        angularSpeed: 230
+        accelerationNoTarget: 10
+        accelerationWithTarget: 32
+        radius: 0.3
+        timeToLive: 15
+        splashRadius: 1
+        searchRadius: 5
+        fov: 40
+        flightDistance: 100
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 30
       bps: 2
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 2
       owner: 0
       materialIndex: 0
       laserDamage: 0
       shooting: 0
     - type: 1
       muzzleOffset: {x: 0.36, y: -0.6, z: 0}
+      projectile:
+        type: 1
+        prefab: {fileID: 6316626191963090503, guid: 4479f7960633b1d4a96db71214782a44, type: 3}
+        instanced: 0
+        mesh: 0
+        material: 0
+        damage: 20
+        health: 10
+        explosionDamage: 10
+        canDamageSender: 0
+        speed: 13
+        angularSpeed: 230
+        accelerationNoTarget: 10
+        accelerationWithTarget: 32
+        radius: 0.3
+        timeToLive: 15
+        splashRadius: 1
+        searchRadius: 5
+        fov: 40
+        flightDistance: 100
+        maxLength: 0
+        thickness: 0
+        attackDelay: 0
       range: 30
       bps: 2
       reloadTime: 0
       reloadProgress: 0
       laserThickness: 0
-      projectileId: 2
       owner: 0
       materialIndex: 0
       laserDamage: 0
