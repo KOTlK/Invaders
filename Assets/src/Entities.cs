@@ -1,8 +1,9 @@
+using System.Collections.Generic;
+using UnityEngine;
 using Leopotam.EcsLite;
 using static Assets;
 using static Pools;
 using static Queries;
-using UnityEngine;
 using static Globals;
 using static World;
 using static Vars;
@@ -201,16 +202,27 @@ public struct Effect
     public float timeLeft;
 }
 
+public struct DroppedEffect
+{
+    public int     id;
+    public Vector3 moveDirection;
+}
+
 [System.Serializable]
-public struct EffectValues
+public struct EffectConfig
 {
     public PowerupEffect effectType;
+    public Entity        prefab;
+    public int           dropChance;
     
     public int   damageBoost;
     public int   shieldCapatity;
     public float effectDuration;
-    public float speedBoost;
+    public float maxSpeedBoost;
+    public float accelerationBoost;
+    public float dampingBoost;
     public float bulletSpeedBoost;
+    public float bulletAccelerationBoost;
 }
 
 public struct FollowTarget
@@ -274,7 +286,8 @@ public enum EntityType
     Ship,
     Bullet,
     Missile,
-    Player
+    Player,
+    Boost
 }
 
 public static class Entities
@@ -559,6 +572,43 @@ public static class Entities
         }
     }
     
+    public static (bool, int) DropRandomEffect(Vector3 position)
+    {
+        var random = Random.Range(0, 101);
+        var canBeDropped = new List<int>();
+        
+        for(var i = 0; i < EffectTable.Length; ++i)
+        {
+            if(EffectTable[i].dropChance <= random)
+            {
+                canBeDropped.Add(i);
+            }
+        }
+        
+        if(canBeDropped.Count == 0)
+        {
+            return (false, 0);
+        }else
+        {
+            return (true, DropEffect(canBeDropped[Random.Range(0, canBeDropped.Count)], 
+                                     position));
+        }
+    }
+    
+    public static int DropEffect(int effectId, Vector3 position)
+    {
+            var entity    = CreateEntity();
+            var asset     = EffectTable[effectId];
+        ref var effect    = ref DroppedEffectPool.Add(entity);
+        
+        effect.id = effectId;
+        effect.moveDirection = Random.insideUnitCircle;
+        
+        CreateReference(entity, EntityType.Boost, position, 0f, Vector3.one, asset.prefab);
+        
+        return entity;
+    }
+    
     public static void ApplyEffect(int target, int effectId)
     {
             var entity = CreateEntity();
@@ -573,33 +623,120 @@ public static class Entities
         {
             case PowerupEffect.Damage:
             {
-                
+                ref var ship = ref ShipPool.Get(target);
+                foreach(var weaponId in ship.weapons)
+                {
+                    ref var weapon = ref WeaponPool.Get(weaponId);
+                    
+                    weapon.projectile.damage += asset.damageBoost;
+                }
             }
             break;
             
             case PowerupEffect.Speed:
             {
+                ref var ship = ref ShipPool.Get(target);
                 
+                ship.maxSpeed     += asset.maxSpeedBoost;
+                ship.acceleration += asset.accelerationBoost;
+                ship.damping      += asset.dampingBoost;
             }
             break;
             
             case PowerupEffect.Shield:
             {
-                
+                //#Incomplete
             }
             break;
             
             case PowerupEffect.BulletSpeed:
             {
-                
+                ref var ship = ref ShipPool.Get(target);
+                foreach(var weaponId in ship.weapons)
+                {
+                    ref var weapon = ref WeaponPool.Get(weaponId);
+                    
+                    weapon.projectile.accelerationNoTarget   += asset.bulletAccelerationBoost;
+                    weapon.projectile.accelerationWithTarget += asset.bulletAccelerationBoost;
+                    weapon.projectile.speed                  += asset.bulletSpeedBoost;
+                }
             }
             break;
         }
     }
     
-    public static void RemoveEffect(int target)
+    public static void RemoveEffect(int target, int effectId)
     {
+        var effect = EffectTable[effectId];
+        
+        switch(effect.effectType)
+        {
+            case PowerupEffect.Damage:
+            {
+                ref var ship = ref ShipPool.Get(target);
+                foreach(var weaponId in ship.weapons)
+                {
+                    ref var weapon = ref WeaponPool.Get(weaponId);
+                    
+                    weapon.projectile.damage -= effect.damageBoost;
+                }
+            }
+            break;
+            
+            case PowerupEffect.Speed:
+            {
+                ref var ship = ref ShipPool.Get(target);
+                
+                ship.maxSpeed     += effect.maxSpeedBoost;
+                ship.acceleration += effect.accelerationBoost;
+                ship.damping      += effect.dampingBoost;
+            }
+            break;
+            
+            case PowerupEffect.Shield:
+            {
+                //#Incomplete
+            }
+            break;
+            
+            case PowerupEffect.BulletSpeed:
+            {
+                ref var ship = ref ShipPool.Get(target);
+                
+                foreach(var weaponId in ship.weapons)
+                {
+                    ref var weapon = ref WeaponPool.Get(weaponId);
+                    
+                    weapon.projectile.accelerationNoTarget   += effect.bulletAccelerationBoost;
+                    weapon.projectile.accelerationWithTarget += effect.bulletAccelerationBoost;
+                    weapon.projectile.speed                  += effect.bulletSpeedBoost;
+                }
+            }
+            break;
+        }
         //#Incomplete
+    }
+    
+    public static void UpdateEffects(float dt)
+    {
+        foreach(var entity in EffectsQuery)
+        {
+            ref var effect = ref EffectPool.Get(entity);
+            
+            if(DestroyPool.Has(effect.affectedEntity))
+            {
+                DestroyEntity(entity);
+            }else
+            {
+                effect.timeLeft -= dt;
+                
+                if(effect.timeLeft <= 0)
+                {
+                    RemoveEffect(effect.affectedEntity, effect.id);
+                    DestroyEntity(entity);
+                }
+            }
+        }
     }
     
     public static void UpdateHealth()

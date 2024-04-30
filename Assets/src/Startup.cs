@@ -21,6 +21,7 @@ public class Startup : MonoBehaviour
     public Vector3            WorldSize = new Vector3(100, 100, 0);
     public Camera             Camera;
     public ShipConfig[]       ShipsAssetsTable;
+    public EffectConfig[]     EffectsTable;
     public Sprite[]           Sprites;
     public Material[]         Materials;
     public int                ShipsCount = 100;
@@ -36,9 +37,11 @@ public class Startup : MonoBehaviour
         MainCamera = Camera;
         Pools.InitPools();
         Queries.InitQueries();
+        World.Size             = WorldSize;
         Assets.ShipAssetTable  = ShipsAssetsTable;
         Assets.MaterialTable   = Materials;
-        World.Size             = WorldSize;
+        Assets.EffectTable     = EffectsTable;
+        Assets.SortEffects();
         
         Assets.MeshTable = new Mesh[Sprites.Length];
         

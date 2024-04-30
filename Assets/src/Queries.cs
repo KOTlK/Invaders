@@ -21,6 +21,7 @@ public static class Queries
     public static EcsFilter MissilesQuery;
     public static EcsFilter WeaponsQuery;
     public static EcsFilter EffectsQuery;
+    public static EcsFilter DroppedEffectsQuery;
     
     public static void InitQueries()
     {
@@ -42,5 +43,6 @@ public static class Queries
         MissilesQuery             = MainWorld.Filter<Missile>().Inc<Movement>().Inc<Transform>().Exc<Destroy>().End();
         WeaponsQuery             = MainWorld.Filter<Weapon>().Exc<Destroy>().End();
         EffectsQuery             = MainWorld.Filter<Effect>().Exc<Destroy>().End();
+        DroppedEffectsQuery      = MainWorld.Filter<DroppedEffect>().Inc<Transform>().Exc<Destroy>().End();
     }
 }

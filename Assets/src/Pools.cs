@@ -25,6 +25,7 @@ public static class Pools
     public static EcsPool<Missile>             MissilePool;
     public static EcsPool<Weapon>              WeaponPool;
     public static EcsPool<Effect>              EffectPool;
+    public static EcsPool<DroppedEffect>       DroppedEffectPool;
     
         
     public static void InitPools()
@@ -50,6 +51,7 @@ public static class Pools
         MissilePool       = MainWorld.GetPool<Missile>();
         WeaponPool        = MainWorld.GetPool<Weapon>();
         EffectPool        = MainWorld.GetPool<Effect>();
+        DroppedEffectPool = MainWorld.GetPool<DroppedEffect>();
     }
     
     
